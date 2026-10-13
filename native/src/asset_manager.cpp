@@ -72,6 +72,7 @@ std::optional<std::vector<std::byte>> AssetManager::data(AssetId id) const {
     std::lock_guard lock(mutex_);
     const auto it=entries_.find(id);
     if (it==entries_.end() || it->second.snapshot.state!=AssetState::Ready) return std::nullopt;
+    it->second.lastUse=++clock_;
     return it->second.data;
 }
 std::optional<AssetSnapshot> AssetManager::inspect(AssetId id) const {
