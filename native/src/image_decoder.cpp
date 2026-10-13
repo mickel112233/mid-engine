@@ -11,7 +11,7 @@ ImageRgba8 decodeBmp(std::span<const std::byte> b){
     const auto offset=u32(b,10),header=u32(b,14);
     if(header<40||14ULL+header>b.size())throw std::invalid_argument("Unsupported BMP DIB header");
     const auto widthSigned=static_cast<std::int32_t>(u32(b,18)),heightSigned=static_cast<std::int32_t>(u32(b,22));
-    const auto planes=u16(b,26),bits=u16(b,28),compression=u32(b,30);
+    const auto planes=u16(b,26); const auto bits=u16(b,28); const auto compression=u32(b,30);
     if(widthSigned<=0||heightSigned==0||heightSigned==std::numeric_limits<std::int32_t>::min()||planes!=1||(bits!=24&&bits!=32)||compression!=0)
         throw std::invalid_argument("Only uncompressed 24/32-bit BMP images are supported");
     const auto width=static_cast<std::uint32_t>(widthSigned),height=static_cast<std::uint32_t>(heightSigned<0?-heightSigned:heightSigned);
