@@ -91,7 +91,10 @@ OpenGL33Device::OpenGL33Device(Functions functions):gl_(functions){
    shadowEnabled_=gl_.CheckFramebufferStatus(GL_FRAMEBUFFER)==GL_FRAMEBUFFER_COMPLETE;gl_.BindFramebuffer(GL_FRAMEBUFFER,0);
    if(!shadowEnabled_)throw std::runtime_error("Native shadow framebuffer is incomplete");
   }catch(...){
-   if(shadowFramebuffer_)gl_.DeleteFramebuffers(1,&shadowFramebuffer_);if(shadowTexture_)gl_.DeleteTextures(1,&shadowTexture_);if(shadowColorBuffer_)gl_.DeleteRenderbuffers(1,&shadowColorBuffer_);if(shadowProgram_)gl_.DeleteProgram(shadowProgram_);
+   if(shadowFramebuffer_)gl_.DeleteFramebuffers(1,&shadowFramebuffer_);
+   if(shadowTexture_)gl_.DeleteTextures(1,&shadowTexture_);
+   if(shadowColorBuffer_)gl_.DeleteRenderbuffers(1,&shadowColorBuffer_);
+   if(shadowProgram_)gl_.DeleteProgram(shadowProgram_);
    shadowFramebuffer_=shadowTexture_=shadowColorBuffer_=shadowProgram_=0;shadowEnabled_=false;gl_.BindFramebuffer(GL_FRAMEBUFFER,0);
   }
  }
