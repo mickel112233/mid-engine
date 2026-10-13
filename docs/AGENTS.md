@@ -76,4 +76,4 @@ This is an early local-development boundary, not a hardened multi-user security 
 
 ## MCP direction
 
-The current tool definitions are intentionally transport-neutral and can be wrapped in an MCP server adapter. The adapter should map each manifest entry to a typed MCP tool, preserve the same validation and approval checks, and return structured content plus an error code. Keep the engine core independent from any specific model provider.
+The editor now includes a basic WebGL viewport for cube-like scene entities with orbit and zoom controls; it is an early renderer, not yet a full asset/material renderer. The current tool definitions are intentionally transport-neutral and can be wrapped in an MCP server adapter. The adapter should map each manifest entry to a typed MCP tool, preserve the same validation and approval checks, and return structured content plus an error code. Keep the engine core independent from any specific model provider.
