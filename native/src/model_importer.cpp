@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <utility>
 #ifdef MID_ENGINE_WITH_ASSIMP
 #include <assimp/Importer.hpp>
 #include <assimp/material.h>
