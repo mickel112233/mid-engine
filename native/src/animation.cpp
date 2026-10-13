@@ -50,13 +50,15 @@ Vec3f normalizedVector(Vec3f v){const float n=length(v);return n>1e-7F?mul(v,1.0
 Pose evaluateWorldPose(const Skeleton& skeleton,bool bindPose){
  skeleton.validate();Pose out;out.joints.resize(skeleton.joints.size());std::vector<unsigned char> state(skeleton.joints.size(),0);
  const auto visit=[&](auto&& self,std::size_t i)->void{
-  if(state[i]==2)return;if(state[i]==1)throw std::logic_error("Skeleton hierarchy cycle");
+  if(state[i]==2) return;
+  if(state[i]==1) throw std::logic_error("Skeleton hierarchy cycle");
   state[i]=1;const auto& j=skeleton.joints[i];const Vec3f localPosition=bindPose?j.bindPosition:j.position;const Vec3f localRotation=bindPose?j.bindRotationDegrees:j.rotationDegrees;const Quat localQ=qfromEuler(localRotation);
   if(j.parent>=0){const auto p=static_cast<std::size_t>(j.parent);self(self,p);const auto& parent=out.joints[p];const Quat parentQ=poseQuat(parent.rotationQuaternion);out.joints[i].position=add(parent.position,qrotate(parentQ,localPosition));out.joints[i].rotationQuaternion=poseVec(qmul(parentQ,localQ));}
   else {out.joints[i].position=localPosition;out.joints[i].rotationQuaternion=poseVec(localQ);}
   state[i]=2;
  };
- for(std::size_t i=0;i<skeleton.joints.size();++i)visit(visit,i);return out;
+ for(std::size_t i=0;i<skeleton.joints.size();++i) visit(visit,i);
+ return out;
 }
 Pose blendPoses(const Pose& a,const Pose& b,float alpha){
  if(a.joints.size()!=b.joints.size()||!std::isfinite(alpha)||alpha<0||alpha>1)throw std::invalid_argument("Pose blend inputs are incompatible");
