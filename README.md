@@ -28,14 +28,15 @@ npm run check
 
 - Editor layout with scene tree, viewport, inspector, asset list, and agent command panel
 - Persistent scene/entity model with transforms and JSON serialization
-- Local HTTP API for AI agents to inspect the project and perform allowlisted scene operations
+- Local HTTP API and OpenAPI contract for AI agents to inspect the project and perform allowlisted scene operations
+- Dependency-free MCP stdio adapter for compatible agent clients
 - Optional approval gate for operations marked destructive
 - Event log and tool result envelopes for agent verification
 - Node's built-in test runner; no third-party runtime dependencies
 
 ## Agent integration
 
-Read [docs/AGENTS.md](docs/AGENTS.md) for the tool contract and safety model. The API is intended for local trusted integrations. Do not expose this server to a network or the public internet without adding authentication, origin controls, and a hardened permission model.
+Read [docs/AGENTS.md](docs/AGENTS.md) for the tool contract and safety model. An MCP-compatible client can launch `node server/mcp-stdio.mjs`; see [docs/mcp-config.example.json](docs/mcp-config.example.json). The HTTP OpenAPI contract is served at `/openapi.json`. The API is intended for local trusted integrations. Do not expose this server to a network or the public internet without adding authentication, origin controls, and a hardened permission model.
 
 ## Roadmap
 
