@@ -45,7 +45,7 @@ Additional native modules: `mid/pbr.hpp` provides a CPU Cook-Torrance/GGX shadin
 ## Expanded systems (experimental, build-tested on CI where noted)
 
 - `mid/editor_session.hpp`: constrained axis/plane transform edits, scene-snapshot undo/redo, and an isolated play-mode copy.
-- `mid/physics.hpp`: spatial-hash sphere broadphase, static plane/axis-aligned box/capsule colliders, and spring-damper distance joints. This is not a full rigid-body solver; angular dynamics, convex collision, hinge/fixed joints, and robust manifold solving remain future work.
+- `mid/physics.hpp`: spatial-hash sphere broadphase, static plane/axis-aligned box/capsule colliders, spring-damper distance joints, and unilateral rope constraints. This is not a full rigid-body solver; angular dynamics, convex collision, hinge/fixed joints, and robust manifold solving remain future work.
 - `mid/animation.hpp`: hierarchical quaternion world-pose evaluation, quaternion pose blending, CPU vertex skinning, keyframe position/rotation sampling, and CCD IK. Rotation-limit-aware IK and a full animation graph remain future work.
 - `mid/image_decoder.hpp`: bounds-checked uncompressed 24/32-bit BMP decoding to RGBA8. PNG/JPEG/HDR decoding and GPU texture binding are not yet provided by this decoder.
 - `mid/model_importer.hpp`: optional Assimp-backed mesh/material/node-hierarchy extraction for formats enabled in the installed Assimp build, including glTF/GLB and FBX. Install Assimp development files and reconfigure CMake to enable it; embedded texture extraction and complete node/animation import are still incomplete.
