@@ -88,8 +88,8 @@ ImportedModel importModelFile(const std::filesystem::path& path) {
  std::unordered_map<std::string,std::size_t> nodeByName;for(std::size_t i=0;i<out.nodes.size();++i)nodeByName.emplace(out.nodes[i].name,i);
  for(unsigned int i=0;i<scene->mNumAnimations;++i){const aiAnimation* source=scene->mAnimations[i];animation::Clip clip;clip.name=source->mName.length?source->mName.C_Str():"Animation_"+std::to_string(i);const double ticks=source->mTicksPerSecond>0?source->mTicksPerSecond:25.0;clip.duration=static_cast<float>(source->mDuration/ticks);
   for(unsigned int channelIndex=0;channelIndex<source->mNumChannels;++channelIndex){const aiNodeAnim* channel=source->mChannels[channelIndex];const auto node=nodeByName.find(channel->mNodeName.C_Str());if(node==nodeByName.end()){out.warnings.emplace_back("Animation channel references a node absent from the imported hierarchy.");continue;}animation::JointTrack track;track.joint=node->second;
-   for(unsigned int k=0;k<channel->mNumPositionKeys;++k){const auto& key=channel->mPositionKeys[k];track.positions.push_back({static_cast<float>(key.mTime/ticks),{key.mValue.x,key.mValue.y,key.mValue.z}});}
-   for(unsigned int k=0;k<channel->mNumRotationKeys;++k){const auto& key=channel->mRotationKeys[k];track.rotations.push_back({static_cast<float>(key.mTime/ticks),quaternionToEulerDegrees(key.mValue)});}
+   for(unsigned int k=0;k<channel->mNumPositionKeys;++k){const auto& key=channel->mPositionKeys[k];track.positions.push_back({std::clamp(static_cast<float>(key.mTime/ticks),0.0F,clip.duration),{key.mValue.x,key.mValue.y,key.mValue.z}});}
+   for(unsigned int k=0;k<channel->mNumRotationKeys;++k){const auto& key=channel->mRotationKeys[k];track.rotations.push_back({std::clamp(static_cast<float>(key.mTime/ticks),0.0F,clip.duration),quaternionToEulerDegrees(key.mValue)});}
    if(channel->mNumScalingKeys>0)out.warnings.emplace_back("Animation scale keys are not represented by the current position/rotation clip format.");
    clip.tracks.push_back(std::move(track));
   }
