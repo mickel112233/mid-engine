@@ -12,6 +12,12 @@ cmake --build build --config Release
 ctest --test-dir build --build-config Release --output-on-failure
 ```
 
+## Launch the native desktop starter
+
+When CMake finds SDL2 development files, it also builds `mid_engine_desktop`. Run it from the build directory (Windows: `build/Release/mid_engine_desktop.exe`; single-configuration generators: `./build/mid_engine_desktop`). It opens a resizable OpenGL 3.3 window with a lit starter cube and the native editor controls. A desktop display and a working OpenGL 3.3 driver are required; CI verifies compilation/tests but does not assert real hardware rendering.
+
+Controls: left-drag to orbit, click an object to select it, WASD/QE to move the camera, F5 to toggle isolated play mode, Ctrl+Z/Ctrl+Y to undo/redo, and G to enable axis-constrained translation (X/Y/Z select the axis). The native axis drag is intentionally minimal and is not a rendered 3D gizmo.
+
 ## Current native slice
 
 - Stable, monotonically assigned entity IDs.
