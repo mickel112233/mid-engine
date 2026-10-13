@@ -1,12 +1,15 @@
-#include "mid/opengl33_device.hpp"
+#include "mid/native_editor_runtime.hpp"
+#include <algorithm>
 #include <array>
+#include <cmath>
+#include <unordered_map>
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
 
 namespace {
 using namespace mid::render::gl33;
-UInt nextHandle=1;std::size_t instancedDraws=0,ordinaryDraws=0,textureUploads=0;
+UInt nextHandle=1;std::size_t instancedDraws=0,ordinaryDraws=0,textureUploads=0;std::array<float,16> lastMatrix{};
 void genBuffers(Sizei n,UInt* p){for(int i=0;i<n;++i)p[i]=nextHandle++;}
 void deleteBuffers(Sizei,const UInt*){} void bindBuffer(Enum,UInt){} void bufferData(Enum,Sizeiptr,const void*,Enum){}
 void genVaos(Sizei n,UInt* p){for(int i=0;i<n;++i)p[i]=nextHandle++;}
@@ -16,7 +19,7 @@ UInt createShader(Enum){return nextHandle++;} void shaderSource(UInt,Sizei,const
 void getShader(UInt,Enum,Int* p){*p=1;} void shaderLog(UInt,Sizei,Sizei*,Char*){} void deleteShader(UInt){}
 UInt createProgram(){return nextHandle++;} void attachShader(UInt,UInt){} void linkProgram(UInt){} void getProgram(UInt,Enum,Int* p){*p=1;}
 void programLog(UInt,Sizei,Sizei*,Char*){} void deleteProgram(UInt){} void useProgram(UInt){}
-Int uniformLocation(UInt,const Char*){return 1;} void uniformMatrix(Int,Sizei,Boolean,const Float*){} void uniform3(Int,Float,Float,Float){}
+Int uniformLocation(UInt,const Char*){return 1;} void uniformMatrix(Int,Sizei,Boolean,const Float* matrix){if(matrix)std::copy(matrix,matrix+16,lastMatrix.begin());} void uniform3(Int,Float,Float,Float){}
 void uniform4(Int,Float,Float,Float,Float){} void uniform1(Int,Float){} void uniform1i(Int,Int){}
 void drawInstanced(Enum,Sizei,Enum,const void*,Sizei n){++instancedDraws;if(n<1)throw std::runtime_error("invalid instance count");}
 void drawElements(Enum,Sizei,Enum,const void*){++ordinaryDraws;}
@@ -53,6 +56,9 @@ int main(){
   check(instancedDraws==1,"native OpenGL device submits one instanced draw for a two-entity batch");
   check(device.lastStats().estimatedInstanceCount==2&&device.lastStats().drawCalls==1,"native render statistics report instance and draw counts");
   check(textureUploads==1,"RGBA8 texture upload reaches OpenGL backend");
+  mid::Scene editorScene("native editor runtime");const auto entity=editorScene.createEntity("Cube");mid::editor::EditorSession session(editorScene);mid::editor::SceneRenderBridge bridge;bridge.setRenderComponents(entity,{1,2,{{0,0,0},1.0F},true,{}});std::unordered_map<mid::render::ResourceId,mid::render::Material> materialMap{{2,material}};mid::editor::NativeEditorRuntime runtime(session,bridge,device,materialMap);
+  const auto editStats=runtime.renderFrame();check(editStats.visible==1,"native editor runtime builds and renders authoring scene snapshot");
+  session.enterPlayMode();auto runtimeTransform=session.runtimeScene()->get(entity).transform;runtimeTransform.position.y=2.0;session.setRuntimeTransform(entity,runtimeTransform);(void)runtime.renderFrame();check(std::abs(lastMatrix[13]-2.0F)<0.01F,"native render loop follows isolated play-mode transforms");session.stopPlayMode();
  }
  return failures?1:0;
 }
