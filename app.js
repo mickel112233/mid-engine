@@ -1,4 +1,8 @@
+import { createWebGLRenderer } from "/engine/webgl-renderer.js";
 const $ = (selector) => document.querySelector(selector);
+let renderer = null;
+try { renderer = createWebGLRenderer($("#scene-canvas")); }
+catch (error) { console.error(error); $("#connection-state").textContent = "WEBGL UNAVAILABLE"; }
 let scene = null;
 let selectedId = null;
 let assets = [];
@@ -35,19 +39,9 @@ function render() {
     $("#scene-tree").append(row);
   }
   $("#viewport-empty").classList.toggle("hidden", scene.entities.length > 0);
-  $("#scene-preview").replaceChildren();
-  scene.entities.filter((entity) => entity.enabled).forEach((entity, index) => {
-    const object = document.createElement("div");
-    object.className = `preview-object ${entity.type === "camera" ? "camera" : entity.type === "light" ? "light" : ""}`;
-    const x = Number(entity.transform.position[0]) || 0;
-    const y = Number(entity.transform.position[1]) || 0;
-    object.style.left = `${50 + x * 5}%`;
-    object.style.top = `${50 - y * 5}%`;
-    object.style.opacity = entity.type === "empty" ? ".35" : "1";
-    object.style.transform = `translate(-50%,-50%) rotate(${45 + index * 9}deg) scale(${Math.max(.4, Math.min(2, Number(entity.transform.scale[0]) || 1))})`;
-    object.title = entity.name;
-    $("#scene-preview").append(object);
-  });
+  window.__midEngineLastScene = scene;
+  window.__midEngineSelectedId = selectedId;
+  renderer?.render(scene, selectedId);
   renderInspector();
   $("#asset-count").textContent = `${assets.length} ITEMS`;
   $("#asset-list").replaceChildren();
