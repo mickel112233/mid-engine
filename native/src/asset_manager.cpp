@@ -48,7 +48,7 @@ AssetId AssetManager::loadAsync(const std::filesystem::path& inputPath) {
         try { finishLoad(id,loader(path),{}); }
         catch (const std::exception& e) { finishLoad(id,{},e.what()); }
         catch (...) { finishLoad(id,{},"Unknown asset loading error"); }
-    });
+    }).share();
     return id;
 }
 void AssetManager::finishLoad(AssetId id,std::vector<std::byte> bytes,std::string error) {
@@ -81,14 +81,14 @@ std::optional<AssetSnapshot> AssetManager::inspect(AssetId id) const {
     return it->second.snapshot;
 }
 void AssetManager::wait(AssetId id) {
-    std::future<void>* task=nullptr;
+    std::shared_future<void> task;
     {
         std::lock_guard lock(mutex_);
         const auto it=entries_.find(id);
         if (it==entries_.end()) throw std::out_of_range("Unknown asset ID");
-        task=&it->second.task;
+        task=it->second.task;
     }
-    if (task->valid()) task->wait();
+    if (task.valid()) task.wait();
 }
 void AssetManager::setMemoryBudget(std::size_t bytes) {
     std::lock_guard lock(mutex_); budget_=bytes; enforceBudgetLocked();
@@ -127,7 +127,7 @@ void AssetManager::enforceBudgetLocked() {
     }
 }
 void AssetManager::clear() {
-    std::vector<std::future<void>> tasks;
+    std::vector<std::shared_future<void>> tasks;
     {
         std::lock_guard lock(mutex_);
         for (auto& [id,entry] : entries_) { (void)id; if (entry.task.valid()) tasks.push_back(std::move(entry.task)); }
