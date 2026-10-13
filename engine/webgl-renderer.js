@@ -251,15 +251,36 @@ export function createWebGLRenderer(canvas) {
   const gridVertices=createGridVertices();
   uploadGeometry(gl,gridBuffer,gridVertices);
   uploadGeometry(gl,cubeBuffer,CUBE_VERTICES);
-  let yaw=.78,pitch=.58,distance=11,dragging=false,lastX=0,lastY=0,lastScene=null,lastSelectedId=null;
+  let yaw=.78,pitch=.58,distance=11,dragging=false,pointerMoved=false,downX=0,downY=0,lastX=0,lastY=0,lastScene=null,lastSelectedId=null;
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
   gl.clearColor(.075,.083,.105,1);
-  canvas.addEventListener("pointerdown",(event)=>{dragging=true;lastX=event.clientX;lastY=event.clientY;canvas.setPointerCapture?.(event.pointerId);});
-  canvas.addEventListener("pointerup",()=>{dragging=false;});
-  canvas.addEventListener("pointercancel",()=>{dragging=false;});
-  canvas.addEventListener("pointermove",(event)=>{if(!dragging)return;yaw-=(event.clientX-lastX)*.008;pitch=Math.max(-1.25,Math.min(1.25,pitch+(event.clientY-lastY)*.008));lastX=event.clientX;lastY=event.clientY;if(lastScene)render(lastScene,lastSelectedId);});
+  canvas.addEventListener("pointerdown",(event)=>{dragging=true;pointerMoved=false;downX=lastX=event.clientX;downY=lastY=event.clientY;canvas.setPointerCapture?.(event.pointerId);});
+  canvas.addEventListener("pointerup",(event)=>{dragging=false;if(!pointerMoved&&lastScene){const picked=pick(lastScene,event.clientX,event.clientY);canvas.dispatchEvent(new CustomEvent("mid-engine-pick",{detail:{entityId:picked}}));}});
+  canvas.addEventListener("pointercancel",()=>{dragging=false;pointerMoved=false;});
+  canvas.addEventListener("pointermove",(event)=>{if(!dragging)return;if(Math.hypot(event.clientX-downX,event.clientY-downY)>4)pointerMoved=true;if(pointerMoved){yaw-=(event.clientX-lastX)*.008;pitch=Math.max(-1.25,Math.min(1.25,pitch+(event.clientY-lastY)*.008));}lastX=event.clientX;lastY=event.clientY;if(pointerMoved&&lastScene)render(lastScene,lastSelectedId);});
   canvas.addEventListener("wheel",(event)=>{event.preventDefault();distance=Math.max(3,Math.min(30,distance+event.deltaY*.015));if(lastScene)render(lastScene,lastSelectedId);},{passive:false});
+  function pick(scene,clientX,clientY) {
+    const rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height||!canvas.width||!canvas.height)return null;
+    const px=(clientX-rect.left)*canvas.width/rect.width,py=(clientY-rect.top)*canvas.height/rect.height;
+    const eye=[distance*Math.cos(pitch)*Math.sin(yaw),distance*Math.sin(pitch),distance*Math.cos(pitch)*Math.cos(yaw)];
+    const vp=multiply(perspective(Math.PI/4,canvas.width/canvas.height,.1,150),lookAt(eye,[0,0,0],[0,1,0]));
+    let best=null,bestDepth=Infinity;
+    for(const entity of (scene?.entities||[])){
+      if(entity.enabled===false)continue;
+      const t=entity.transform||{},p=t.position||[0,0,0],s=t.scale||[1,1,1];
+      const x=p[0],y=p[1],z=p[2];
+      const cx=vp[0]*x+vp[4]*y+vp[8]*z+vp[12],cy=vp[1]*x+vp[5]*y+vp[9]*z+vp[13];
+      const cz=vp[2]*x+vp[6]*y+vp[10]*z+vp[14],cw=vp[3]*x+vp[7]*y+vp[11]*z+vp[15];
+      if(cw<=.1)continue;
+      const sx=(cx/cw+1)*.5*canvas.width,sy=(1-cy/cw)*.5*canvas.height,depth=cz/cw;
+      const factor=entity.type==="empty"?.22:entity.type==="light"?.35:1;
+      const radius=Math.max(10,Math.max(Math.abs(s[0]),Math.abs(s[1]),Math.abs(s[2]))*factor*canvas.height/(2*Math.tan(Math.PI/8)*cw)*.9);
+      if((sx-px)*(sx-px)+(sy-py)*(sy-py)<=radius*radius&&depth<bestDepth){best=entity.id;bestDepth=depth;}
+    }
+    return best;
+  }
   function resize() {
     const rect=canvas.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,2);
     const width=Math.max(1,Math.floor(rect.width*ratio)),height=Math.max(1,Math.floor(rect.height*ratio));
@@ -267,6 +288,7 @@ export function createWebGLRenderer(canvas) {
     gl.viewport(0,0,width,height);
   }
   function render(scene,selectedId=null) {
+    lastScene=scene;lastSelectedId=selectedId;
     const startedAt=performance.now();
     if(timerQuery&&pendingGpuQuery&&timerQuery.getQueryObjectEXT(pendingGpuQuery,timerQuery.QUERY_RESULT_AVAILABLE_EXT)){
       const disjoint=gl.getParameter(timerQuery.GPU_DISJOINT_EXT);
