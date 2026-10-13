@@ -49,6 +49,13 @@ void PhysicsWorld::addBox(BoxCollider box) {
     boxes_.push_back(box);
 }
 void PhysicsWorld::clearBoxes() noexcept { boxes_.clear(); }
+void PhysicsWorld::addCapsule(CapsuleCollider capsule) {
+    if(!finite(capsule.a)||!finite(capsule.b)||!std::isfinite(capsule.radius)||capsule.radius<=0.0F||
+       !std::isfinite(capsule.restitution)||capsule.restitution<0.0F||capsule.restitution>1.0F)
+        throw std::invalid_argument("Capsule collider values are invalid");
+    capsules_.push_back(capsule);
+}
+void PhysicsWorld::clearCapsules() noexcept { capsules_.clear(); }
 void PhysicsWorld::addDistanceJoint(DistanceJoint joint) {
     if(joint.a==0||joint.b==0||joint.a==joint.b||!body(joint.a)||!body(joint.b)||
        !std::isfinite(joint.restLength)||joint.restLength<0.0F||!std::isfinite(joint.stiffness)||joint.stiffness<0.0F||
@@ -156,6 +163,16 @@ void PhysicsWorld::step() {
         body.position=add(body.position,mul(normal,penetration));
         const float vn=dot(body.velocity,normal);
         if(vn<0.0F) body.velocity=sub(body.velocity,mul(normal,(1.0F+std::min(body.restitution,box.restitution))*vn));
+        contacts_.push_back({body.entityId,0,normal,penetration});
+    }
+    for(auto& body:bodies_) if(!body.kinematic&&body.inverseMass>0.0F) for(const auto& capsule:capsules_) {
+        const Vec3f segment=sub(capsule.b,capsule.a);const float segmentLengthSquared=dot(segment,segment);
+        const float t=segmentLengthSquared>1.0e-7F?std::clamp(dot(sub(body.position,capsule.a),segment)/segmentLengthSquared,0.0F,1.0F):0.0F;
+        const Vec3f closest=add(capsule.a,mul(segment,t));const Vec3f delta=sub(body.position,closest);const float distance=length(delta),sum=body.radius+capsule.radius;
+        if(distance>=sum)continue;
+        const Vec3f normal=distance>1.0e-6F?mul(delta,1.0F/distance):Vec3f{1,0,0};const float penetration=sum-distance;
+        body.position=add(body.position,mul(normal,penetration));const float vn=dot(body.velocity,normal);
+        if(vn<0.0F)body.velocity=sub(body.velocity,mul(normal,(1.0F+std::min(body.restitution,capsule.restitution))*vn));
         contacts_.push_back({body.entityId,0,normal,penetration});
     }
     stats_.contacts=contacts_.size();
