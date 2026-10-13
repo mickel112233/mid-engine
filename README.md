@@ -32,6 +32,7 @@ ctest --test-dir build --build-config Release --output-on-failure
 
 - Editor layout with scene tree, interactive WebGL viewport, inspector, asset list, and agent command panel
 - Basic 3D cube geometry, perspective camera, grid, mouse orbit, and wheel zoom
+- WebGL preview directional diffuse lighting with per-face normals and reduced redundant geometry uploads
 - Persistent scene/entity model with transforms and JSON serialization
 - Local HTTP API and OpenAPI contract for AI agents to inspect the project and perform allowlisted scene operations
 - Dependency-free MCP stdio adapter for compatible agent clients
