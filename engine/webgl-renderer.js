@@ -201,6 +201,7 @@ export function createWebGLRenderer(canvas) {
     gl.uniformMatrix4fv(locations.model,false,IDENTITY);
     gl.uniform3fv(locations.tint,[1,1,1]);
     gl.uniform3fv(locations.lightDirection,[-0.45,-1.0,-0.3]);
+    gl.uniform3fv(locations.cameraPosition,eye);
     gl.uniform1f(locations.ambient,0.32);
     bindGeometry(gl,gridBuffer,locations.position,locations.color,locations.normal);
     gl.disable(gl.CULL_FACE);
