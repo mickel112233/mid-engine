@@ -15,7 +15,7 @@ Vec3f mul(Vec3f a,float s){return {a.x*s,a.y*s,a.z*s};}
 float length(Vec3f a){return std::sqrt(dot(a,a));}
 bool finite(Vec3f a){return std::isfinite(a.x)&&std::isfinite(a.y)&&std::isfinite(a.z);}
 struct Cell { int x,y,z; bool operator==(const Cell&) const = default; };
-struct CellHash { std::size_t operator()(const Cell& c) const noexcept { return std::hash<int>{}(c.x) ^ (std::hash<int>{}(c.y)<<1U) ^ (std::hash<int>{}(c.z)<<2U); };
+struct CellHash { std::size_t operator()(const Cell& c) const noexcept { return std::hash<int>{}(c.x) ^ (std::hash<int>{}(c.y)<<1U) ^ (std::hash<int>{}(c.z)<<2U); } };
 }
 PhysicsWorld::PhysicsWorld(Vec3f gravity,float fixedStep):gravity_(gravity),fixedStep_(fixedStep) {
     if(!finite(gravity)||!std::isfinite(fixedStep)||fixedStep<=0.0F) throw std::invalid_argument("Physics gravity and fixed step must be finite; step must be positive");
