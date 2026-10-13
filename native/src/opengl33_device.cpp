@@ -49,7 +49,7 @@ uniform mat4 uLightViewProjection;
 uniform mat4 uModel;
 uniform int uInstanced;
 out vec3 vWorldPosition; out vec3 vNormal; out vec2 vUv; out vec4 vColor; out vec4 vShadowPosition;
-void main(){mat4 model=uInstanced==1?iModel:uModel;vec4 world=model*vec4(aPosition,1.0);vWorldPosition=world.xyz;vShadowPosition=uLightViewProjection*world;vNormal=normalize(mat3(model)*aNormal);vUv=aUv;vColor=aColor;gl_Position=uViewProjection*world;})";
+void main(){mat4 model=uInstanced==1?iModel:uModel;vec4 world=model*vec4(aPosition,1.0);vWorldPosition=world.xyz;vShadowPosition=uLightViewProjection*world;vNormal=normalize(transpose(inverse(mat3(model)))*aNormal);vUv=aUv;vColor=aColor;gl_Position=uViewProjection*world;})";
 constexpr const char* FRAGMENT_SHADER=R"(#version 330 core
 in vec3 vWorldPosition; in vec3 vNormal; in vec2 vUv; in vec4 vColor; in vec4 vShadowPosition;
 uniform sampler2D uShadowMap; uniform int uShadowEnabled;
