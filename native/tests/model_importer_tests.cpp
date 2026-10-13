@@ -13,7 +13,16 @@ int main(){
    check(!model.meshes.empty(),"real glTF fixture imports its triangle mesh");
    check(!model.materials.empty(),"real glTF fixture imports its material");
    check(!model.embeddedTextures.empty(),"glTF data-URI image is extracted as an embedded texture");
-   if(!model.embeddedTextures.empty())check(!model.embeddedTextures.front().bytes.empty(),"embedded glTF texture payload is preserved");
+   if(!model.embeddedTextures.empty()){
+    check(!model.embeddedTextures.front().bytes.empty(),"embedded glTF texture payload is preserved");
+    check(model.embeddedTextures.front().compressed,"PNG image payload remains encoded until image-decoder upload");
+    check(model.embeddedTextures.front().formatHint=="png","embedded image format hint is retained");
+   }
+   check(model.meshMaterialIndices.size()==model.meshes.size(),"each imported mesh retains its source material index");
+   check(!model.meshMaterialIndices.empty()&&model.meshMaterialIndices.front()<model.materials.size(),"imported mesh material index points at an imported material");
+   check(!model.materials.empty()&&!model.materials.front().texturePaths.empty()&&model.materials.front().texturePaths.front()=="*0","material preserves its embedded-texture reference for later binding");
+   check(!model.nodes.empty()&&!model.nodes.front().meshIndices.empty(),"scene hierarchy retains node-to-mesh associations");
+   check(!model.meshes.empty()&&model.meshes.front().vertices.size()==3&&model.meshes.front().indices.size()==3,"glTF fixture imports its indexed triangle geometry");
   }catch(const std::exception& e){std::cerr<<"FAIL: glTF fixture import threw: "<<e.what()<<'\n';++failures;}
  }
  return failures?1:0;
