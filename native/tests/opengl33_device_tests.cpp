@@ -39,17 +39,17 @@ Functions fakeFunctions(){
 }
 }
 int main(){
- int failures=0;auto check=[&](bool ok,const char* message){if(!ok){std::cerr<<"FAIL: "<<message<<'\\n';++failures;}};
+ int failures=0;auto check=[&](bool ok,const char* message){if(!ok){std::cerr<<"FAIL: "<<message<<'\n';++failures;}};
  bool rejected=false;try{mid::render::gl33::OpenGL33Device invalid(mid::render::gl33::Functions{});}catch(const std::invalid_argument&){rejected=true;}
  check(rejected,"incomplete OpenGL function table is rejected before GPU calls");
  {
-  mid::render::gl33::OpenGL33Device device(fakeFunctions());
-  mid::render::MeshData mesh;mesh.name="triangle";mesh.vertices.resize(3);mesh.vertices[0].position={0,0,0};mesh.vertices[1].position={1,0,0};mesh.vertices[2].position={0,1,0};mesh.indices={0,1,2};mesh.bounds={{0.5F,0.5F,0},1.0F};device.registerMesh(1,mesh);
-  mid::render::Material material;material.name="mat";device.registerMaterial(2,material);
-  const auto texture=device.createResource(mid::render::ResourceKind::Texture,0,"test texture");const std::uint8_t pixel[4]={255,0,0,255};device.uploadRgba8(texture.id,1,1,pixel,4);device.bindBaseColorTexture(2,texture.id);
+  std::cerr<<"stage device construct\\n";mid::render::gl33::OpenGL33Device device(fakeFunctions());
+  mid::render::MeshData mesh;mesh.name="triangle";mesh.vertices.resize(3);mesh.vertices[0].position={0,0,0};mesh.vertices[1].position={1,0,0};mesh.vertices[2].position={0,1,0};mesh.indices={0,1,2};mesh.bounds={{0.5F,0.5F,0},1.0F};std::cerr<<"stage register mesh\\n";device.registerMesh(1,mesh);
+  mid::render::Material material;material.name="mat";std::cerr<<"stage register material\\n";device.registerMaterial(2,material);
+  std::cerr<<"stage texture\\n";const auto texture=device.createResource(mid::render::ResourceKind::Texture,0,"test texture");const std::uint8_t pixel[4]={255,0,0,255};device.uploadRgba8(texture.id,1,1,pixel,4);device.bindBaseColorTexture(2,texture.id);
   std::array<float,16> a={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1},b=a;b[12]=2;device.setEntityTransform(1,a);device.setEntityTransform(2,b);
-  mid::render::RenderPlan plan;plan.opaqueBatches.push_back({1,2,{1,2}});plan.stats.visible=2;
-  device.beginFrame();device.submit(plan,mid::render::Camera{},mid::render::DirectionalLight{});device.endFrame();
+  std::cerr<<"stage render\\n";mid::render::RenderPlan plan;plan.opaqueBatches.push_back({1,2,{1,2}});plan.stats.visible=2;
+  device.beginFrame();std::cerr<<"stage submit\\n";device.submit(plan,mid::render::Camera{},mid::render::DirectionalLight{});std::cerr<<"stage end\\n";device.endFrame();
   check(instancedDraws==1,"native OpenGL device submits one instanced draw for a two-entity batch");
   check(device.lastStats().estimatedInstanceCount==2&&device.lastStats().drawCalls==1,"native render statistics report instance and draw counts");
   check(textureUploads==1,"RGBA8 texture upload reaches OpenGL backend");
