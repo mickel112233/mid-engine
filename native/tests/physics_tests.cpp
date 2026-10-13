@@ -20,5 +20,6 @@ int main(){
  bool rejected=false;try{world.addBody(a);}catch(const std::invalid_argument&){rejected=true;}
  check(rejected,"duplicate body IDs are rejected");
  check(world.stats().narrowphaseTests<=world.stats().broadphaseCandidates,"narrowphase tests are bounded by broadphase candidates");
+ mid::physics::PhysicsWorld stress({0,0,0});for(std::uint64_t i=1;i<=200;++i){mid::physics::RigidBody body;body.entityId=i;body.position={static_cast<float>(i)*10.0F,0,0};stress.addBody(body);}stress.advance(1.0F/60.0F);check(stress.stats().broadphaseCandidates<200U*199U/2U,"spatial hash prunes sparse-scene collision candidates");
  if(failures)return 1;std::cout<<"Native physics tests passed\n";return 0;
 }
