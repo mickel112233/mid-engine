@@ -149,6 +149,7 @@ export function createWebGLRenderer(canvas) {
     gl.viewport(0,0,width,height);
   }
   function render(scene,selectedId=null) {
+    const startedAt=performance.now();
     resize();
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
@@ -164,13 +165,18 @@ export function createWebGLRenderer(canvas) {
     gl.drawArrays(gl.LINES,0,gridVertices.length/9);
     gl.enable(gl.CULL_FACE);
     bindGeometry(gl,cubeBuffer,locations.position,locations.color,locations.normal);
+    let visibleObjects=0;
+    let drawCalls=1;
     for(const entity of (scene?.entities||[])){
       if(entity.enabled===false)continue;
+      visibleObjects++;
+      drawCalls++;
       gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
       const tint=entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
       gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);
       gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
     }
+    return { submitted:(scene?.entities||[]).length, visible:visibleObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt };
   }
   window.addEventListener("resize",()=>{ if(lastScene) render(lastScene,lastSelectedId); });
   return { render };
