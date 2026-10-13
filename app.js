@@ -41,7 +41,8 @@ function render() {
   $("#viewport-empty").classList.toggle("hidden", scene.entities.length > 0);
   window.__midEngineLastScene = scene;
   window.__midEngineSelectedId = selectedId;
-  renderer?.render(scene, selectedId);
+  const stats = renderer?.render(scene, selectedId);
+  if (stats) $("#render-stats").textContent = `${stats.visible}/${stats.submitted} visible · ${stats.drawCalls} draw calls · ${stats.cpuMilliseconds.toFixed(2)} ms CPU`;
   renderInspector();
   $("#asset-count").textContent = `${assets.length} ITEMS`;
   $("#asset-list").replaceChildren();
