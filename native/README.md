@@ -55,3 +55,5 @@ Additional native modules: `mid/pbr.hpp` provides a CPU Cook-Torrance/GGX shadin
 For a reproducible verification, use the current GitHub Actions run linked from the repository's Actions tab. Do not assume every optional dependency is present on every platform.
 
 - `mid/opengl33_device.hpp`: a concrete native OpenGL 3.3 core renderer with host-loaded GL dispatch, GPU mesh/material registries, RGBA8 texture upload/binding, Cook-Torrance-style shading, and instanced draw batches. The host must create a current GL context and supply a complete function table. Optional native directional depth-map shadows and GPU elapsed-time queries activate when the host provides the corresponding GL entry points.
+
+- `mid/native_editor_runtime.hpp`: selects the editor or play-mode scene, resolves hierarchical world matrices, builds a render plan, submits it through the native OpenGL device, and returns render/GPU timing stats. The host still owns window/context creation, viewport updates, input, and asset/material registration.
