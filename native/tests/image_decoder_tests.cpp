@@ -16,13 +16,13 @@ int main(){
   std::vector<std::byte> png;for(unsigned char b:rawPng)png.push_back(static_cast<std::byte>(b));
   const auto decoded=mid::assets::decodeImage(png);check(decoded.width==1&&decoded.height==1&&decoded.pixels.size()==4&&decoded.pixels[0]==255&&decoded.pixels[1]==0&&decoded.pixels[2]==0&&decoded.pixels[3]==255,"optional PNG decoder outputs RGBA pixels");
  }
- std::string hdrText="#?RADIANCE\\nFORMAT=32-bit_rle_rgbe\\n\\n-Y 1 +X 1\\n";
+ std::string hdrText="#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 1\n";
  std::vector<std::byte> hdr;for(unsigned char ch:hdrText)hdr.push_back(static_cast<std::byte>(ch));
  hdr.push_back(std::byte{128});hdr.push_back(std::byte{64});hdr.push_back(std::byte{32});hdr.push_back(std::byte{129});
  const auto hdrImage=mid::assets::decodeHdr(hdr);
  check(hdrImage.width==1&&hdrImage.height==1&&hdrImage.pixels.size()==4,"Radiance HDR dimensions and float RGBA buffer decode");
  check(std::abs(hdrImage.pixels[0]-1.0F)<0.0001F&&std::abs(hdrImage.pixels[1]-0.5F)<0.0001F&&std::abs(hdrImage.pixels[2]-0.25F)<0.0001F,"Radiance HDR preserves linear RGBE radiance");
- std::string rleHeader="#?RADIANCE\\nFORMAT=32-bit_rle_rgbe\\n\\n-Y 1 +X 8\\n";
+ std::string rleHeader="#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 8\n";
  std::vector<std::byte> rleHdr;for(unsigned char ch:rleHeader)rleHdr.push_back(static_cast<std::byte>(ch));
  for(unsigned char ch:std::vector<unsigned char>{2,2,0,8,136,128,136,64,136,32,136,129})rleHdr.push_back(static_cast<std::byte>(ch));
  const auto rleImage=mid::assets::decodeHdr(rleHdr);
