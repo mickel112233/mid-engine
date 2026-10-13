@@ -16,5 +16,8 @@ int main(){
  auto result=runtime.execute(p,scene);check(result.completed&&scene.get(entity).transform.position.x==3,"script updates native scene through safe command VM");
  mid::script::Runtime limited(1);p.instructions.resize(2);check(!limited.execute(p,scene).completed,"instruction budget rejects oversized scripts");
  const auto before=scene.get(entity).transform.position.x;mid::script::Program invalid{"atomic",{{mid::script::OpCode::SetPosition,entity,{9,9,9},true},{mid::script::OpCode::SetPosition,999999,{0,0,0},true}}};check(!runtime.execute(invalid,scene).completed&&scene.get(entity).transform.position.x==before,"failed scripts roll back all scene mutations");
+ mid::animation::Skeleton skinSkeleton;skinSkeleton.joints={{"root",-1,{0,0,0},{1,0,0},{0,0,0},{0,90,0}},{"child",0,{0,0,1},{0,0,1},{0,0,0},{0,0,0}}};auto worldPose=mid::animation::evaluateWorldPose(skinSkeleton);check(std::abs(worldPose.joints[1].position.x-2.0F)<0.01F,"hierarchical pose applies parent rotation to child offset");
+ mid::animation::Pose poseA=worldPose,poseB=worldPose;poseB.joints[0].position.x=3.0F;auto blended=mid::animation::blendPoses(poseA,poseB,0.5F);check(std::abs(blended.joints[0].position.x-2.0F)<0.01F,"pose blending interpolates joint transforms");
+ mid::render::Vertex bindVertex;bindVertex.position={0,0,1};bindVertex.normal={0,0,1};mid::animation::SkinInfluence influence;influence.joints={1,0,0,0};influence.weights={1,0,0,0};auto skinned=mid::animation::skinMesh(skinSkeleton,{bindVertex},{influence});check(std::abs(skinned[0].position.x-2.0F)<0.01F&&std::abs(skinned[0].position.z)<0.01F,"CPU skeletal skinning transforms vertices from bind pose to animated pose");
  if(failures)return 1;std::cout<<"Native animation/script tests passed\n";return 0;
 }
