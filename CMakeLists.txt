@@ -11,6 +11,7 @@ add_library(mid_engine_core
     native/src/physics.cpp
     native/src/animation.cpp
     native/src/script_runtime.cpp
+    native/src/obj_importer.cpp
 )
 add_library(MidEngine::Core ALIAS mid_engine_core)
 target_compile_features(mid_engine_core PUBLIC cxx_std_20)
@@ -53,4 +54,8 @@ if(MID_ENGINE_BUILD_TESTS)
     target_link_libraries(mid_engine_editor_bridge_tests PRIVATE MidEngine::Core)
     target_compile_features(mid_engine_editor_bridge_tests PRIVATE cxx_std_20)
     add_test(NAME mid_engine.editor_bridge COMMAND mid_engine_editor_bridge_tests)
+    add_executable(mid_engine_obj_importer_tests native/tests/obj_importer_tests.cpp)
+    target_link_libraries(mid_engine_obj_importer_tests PRIVATE MidEngine::Core)
+    target_compile_features(mid_engine_obj_importer_tests PRIVATE cxx_std_20)
+    add_test(NAME mid_engine.obj_importer COMMAND mid_engine_obj_importer_tests)
 endif()
