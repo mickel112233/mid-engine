@@ -123,7 +123,7 @@ export function createWebGLRenderer(canvas) {
   canvas.addEventListener("pointerdown",(event)=>{dragging=true;lastX=event.clientX;lastY=event.clientY;canvas.setPointerCapture?.(event.pointerId);});
   canvas.addEventListener("pointerup",()=>{dragging=false;});
   canvas.addEventListener("pointercancel",()=>{dragging=false;});
-  canvas.addEventListener("pointermove",(event)=>{if(!dragging)return;yaw-=(event.clientX-lastX)*.008;pitch=Math.max(-1.25,Math.min(1.25,pitch+(event.clientY-lastY)*.008));lastX=event.clientX;lastY=event.clientY;});
+  canvas.addEventListener("pointermove",(event)=>{if(!dragging)return;yaw-=(event.clientX-lastX)*.008;pitch=Math.max(-1.25,Math.min(1.25,pitch+(event.clientY-lastY)*.008));lastX=event.clientX;lastY=event.clientY;if(lastScene)render(lastScene,lastSelectedId);});
   canvas.addEventListener("wheel",(event)=>{event.preventDefault();distance=Math.max(3,Math.min(30,distance+event.deltaY*.015));if(lastScene)render(lastScene,lastSelectedId);},{passive:false});
   function resize() {
     const rect=canvas.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,2);
