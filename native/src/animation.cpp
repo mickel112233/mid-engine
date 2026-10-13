@@ -35,6 +35,41 @@ void Clip::validate(const Skeleton& skeleton) const {
     for(const auto& track:tracks){if(track.joint>=skeleton.joints.size())throw std::invalid_argument("Animation track joint is out of range");float previous=-1;
         for(const auto& key:track.positions){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation keyframe is invalid or unsorted");previous=key.time;} previous=-1; for(const auto& key:track.rotations){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation rotation keyframe is invalid or unsorted");previous=key.time;}}
 }
+namespace {
+struct Quat { float x{0},y{0},z{0},w{1}; };
+Quat qmul(Quat a,Quat b){return {a.w*b.x+a.x*b.w+a.y*b.z-a.z*b.y,a.w*b.y-a.x*b.z+a.y*b.w+a.z*b.x,a.w*b.z+a.x*b.y-a.y*b.x+a.z*b.w,a.w*b.w-a.x*b.x-a.y*b.y-a.z*b.z};}
+Quat qnorm(Quat q){const float n=std::sqrt(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w);return n>1e-7F?Quat{q.x/n,q.y/n,q.z/n,q.w/n}:Quat{};}
+Quat qconj(Quat q){return {-q.x,-q.y,-q.z,q.w};}
+Quat qfromEuler(Vec3f d){constexpr float k=0.00872664625997F;const float x=d.x*k,y=d.y*k,z=d.z*k;const Quat qx{std::sin(x),0,0,std::cos(x)},qy{0,std::sin(y),0,std::cos(y)},qz{0,0,std::sin(z),std::cos(z)};return qnorm(qmul(qmul(qx,qy),qz));}
+Vec3f qrotate(Quat q,Vec3f v){const Quat p{v.x,v.y,v.z,0};const Quat r=qmul(qmul(q,p),qconj(q));return {r.x,r.y,r.z};}
+Quat poseQuat(const Vec4f& v){return qnorm({v.x,v.y,v.z,v.w});}
+Vec4f poseVec(Quat q){q=qnorm(q);return {q.x,q.y,q.z,q.w};}
+Quat qslerp(Quat a,Quat b,float t){float d=a.x*b.x+a.y*b.y+a.z*b.z+a.w*b.w;if(d<0){b={-b.x,-b.y,-b.z,-b.w};d=-d;}if(d>.9995F)return qnorm({a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.z+(b.z-a.z)*t,a.w+(b.w-a.w)*t});const float angle=std::acos(std::clamp(d,-1.0F,1.0F)),s=std::sin(angle);const float wa=std::sin((1-t)*angle)/s,wb=std::sin(t*angle)/s;return qnorm({a.x*wa+b.x*wb,a.y*wa+b.y*wb,a.z*wa+b.z*wb,a.w*wa+b.w*wb});}
+Vec3f normalizedVector(Vec3f v){const float n=length(v);return n>1e-7F?mul(v,1.0F/n):Vec3f{0,1,0};}
+}
+Pose evaluateWorldPose(const Skeleton& skeleton,bool bindPose){
+ skeleton.validate();Pose out;out.joints.resize(skeleton.joints.size());std::vector<unsigned char> state(skeleton.joints.size(),0);
+ const auto visit=[&](auto&& self,std::size_t i)->void{
+  if(state[i]==2)return;if(state[i]==1)throw std::logic_error("Skeleton hierarchy cycle");
+  state[i]=1;const auto& j=skeleton.joints[i];const Vec3f localPosition=bindPose?j.bindPosition:j.position;const Vec3f localRotation=bindPose?j.bindRotationDegrees:j.rotationDegrees;const Quat localQ=qfromEuler(localRotation);
+  if(j.parent>=0){const auto p=static_cast<std::size_t>(j.parent);self(self,p);const auto& parent=out.joints[p];const Quat parentQ=poseQuat(parent.rotationQuaternion);out.joints[i].position=add(parent.position,qrotate(parentQ,localPosition));out.joints[i].rotationQuaternion=poseVec(qmul(parentQ,localQ));}
+  else {out.joints[i].position=localPosition;out.joints[i].rotationQuaternion=poseVec(localQ);}
+  state[i]=2;
+ };
+ for(std::size_t i=0;i<skeleton.joints.size();++i)visit(visit,i);return out;
+}
+Pose blendPoses(const Pose& a,const Pose& b,float alpha){
+ if(a.joints.size()!=b.joints.size()||!std::isfinite(alpha)||alpha<0||alpha>1)throw std::invalid_argument("Pose blend inputs are incompatible");
+ Pose out;out.joints.resize(a.joints.size());for(std::size_t i=0;i<out.joints.size();++i){const auto& x=a.joints[i];const auto& y=b.joints[i];out.joints[i].position=add(x.position,mul(sub(y.position,x.position),alpha));out.joints[i].rotationQuaternion=poseVec(qslerp(poseQuat(x.rotationQuaternion),poseQuat(y.rotationQuaternion),alpha));}return out;
+}
+std::vector<Vertex> skinMesh(const Skeleton& skeleton,const std::vector<Vertex>& bindVertices,const std::vector<SkinInfluence>& influences){
+ if(bindVertices.size()!=influences.size())throw std::invalid_argument("Every skinned vertex must have one influence record");
+ const Pose bind=evaluateWorldPose(skeleton,true),current=evaluateWorldPose(skeleton,false);std::vector<Vertex> out=bindVertices;
+ for(std::size_t i=0;i<bindVertices.size();++i){const auto& source=bindVertices[i];const auto& influence=influences[i];float total=0;Vec3f position{},normal{};for(std::size_t k=0;k<4;++k){const float weight=influence.weights[k];if(!std::isfinite(weight)||weight<0)throw std::invalid_argument("Skin weights must be finite and non-negative");if(weight==0)continue;const auto j=influence.joints[k];if(j>=skeleton.joints.size())throw std::out_of_range("Skin joint index is invalid");total+=weight;const auto bindQ=poseQuat(bind.joints[j].rotationQuaternion),currentQ=poseQuat(current.joints[j].rotationQuaternion);const Vec3f local=qrotate(qconj(bindQ),sub(source.position,bind.joints[j].position));position=add(position,mul(add(current.joints[j].position,qrotate(currentQ,local)),weight));normal=add(normal,mul(qrotate(qmul(currentQ,qconj(bindQ)),source.normal),weight));}
+  if(total>1e-7F){out[i].position=mul(position,1.0F/total);out[i].normal=normalizedVector(normal);}
+ }
+ return out;
+}
 Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}}
 void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;}
 void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}}
