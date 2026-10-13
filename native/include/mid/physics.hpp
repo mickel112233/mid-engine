@@ -49,5 +49,6 @@ private:
     std::vector<RigidBody> bodies_;
     std::vector<PlaneCollider> planes_;
     std::vector<Contact> contacts_;
+    PhysicsStats stats_{};
 };
 } // namespace mid::physics
