@@ -26,7 +26,8 @@ npm run check
 
 ## First milestone
 
-- Editor layout with scene tree, viewport, inspector, asset list, and agent command panel
+- Editor layout with scene tree, interactive WebGL viewport, inspector, asset list, and agent command panel
+- Basic 3D cube geometry, perspective camera, grid, mouse orbit, and wheel zoom
 - Persistent scene/entity model with transforms and JSON serialization
 - Local HTTP API and OpenAPI contract for AI agents to inspect the project and perform allowlisted scene operations
 - Dependency-free MCP stdio adapter for compatible agent clients
@@ -41,7 +42,7 @@ Read [docs/AGENTS.md](docs/AGENTS.md) for the tool contract and safety model. An
 ## Roadmap
 
 1. **Foundation (current):** project persistence, editor shell, scene/entity operations, agent tool API, tests.
-2. **Rendering:** WebGL/WebGPU renderer, camera, materials, lighting, asset import pipeline.
+2. **Rendering:** expand the WebGL foundation into materials, lighting, meshes, asset import, camera entities, and WebGPU options.
 3. **Interaction:** input mapping, gizmos, selection, undo/redo, play mode.
 4. **Runtime:** scripting sandbox, deterministic update loop, physics integration.
 5. **AI workflows:** MCP adapter, provider-agnostic agent bridge, task plans, checkpoints, and artifact verification.
