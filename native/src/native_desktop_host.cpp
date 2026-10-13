@@ -107,14 +107,14 @@ struct NativeDesktopHost::Impl {
   const auto forward=normalized(camera.forward),right=normalized(cross(forward,camera.up)),up=normalized(cross(right,forward));
   const auto ray=normalized(add(add(forward,mul(right,nx*tanHalf*camera.aspectRatio)),mul(up,ny*tanHalf)));
   float nearest=std::numeric_limits<float>::max();EntityId result=0;
-  for(const auto& entity:scene.entities()){
+  for(const auto& [entityId,entity]:scene.entities()){
    if(!entity.active)continue;
    render::Vec3f center{static_cast<float>(entity.transform.position.x),static_cast<float>(entity.transform.position.y),static_cast<float>(entity.transform.position.z)};
-   const float radius=std::max({std::abs(static_cast<float>(entity.transform.scale.x)),std::abs(static_cast<float>(entity.transform.scale.y)),std::abs(static_cast<float>(entity.transform.scale.z)),0.15F});
+   const float radius=std::max(std::max(std::abs(static_cast<float>(entity.second.transform.scale.x)),std::abs(static_cast<float>(entity.second.transform.scale.y))),std::max(std::abs(static_cast<float>(entity.second.transform.scale.z)),0.15F));
    const auto delta=render::Vec3f{center.x-camera.position.x,center.y-camera.position.y,center.z-camera.position.z};
    const float along=dot(delta,ray);if(along<camera.nearPlane||along>camera.farPlane)continue;
    const auto closest=add(camera.position,mul(ray,along));const auto miss=render::Vec3f{center.x-closest.x,center.y-closest.y,center.z-closest.z};
-   if(dot(miss,miss)<=radius*radius&&along<nearest){nearest=along;result=entity.id;}
+   if(dot(miss,miss)<=radius*radius&&along<nearest){nearest=along;result=entityId;}
   }
   return result;
  }
