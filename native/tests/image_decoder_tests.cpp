@@ -20,6 +20,11 @@ int main(){
  const auto hdrImage=mid::assets::decodeHdr(hdr);
  check(hdrImage.width==1&&hdrImage.height==1&&hdrImage.pixels.size()==4,"Radiance HDR dimensions and float RGBA buffer decode");
  check(std::abs(hdrImage.pixels[0]-1.0F)<0.0001F&&std::abs(hdrImage.pixels[1]-0.5F)<0.0001F&&std::abs(hdrImage.pixels[2]-0.25F)<0.0001F,"Radiance HDR preserves linear RGBE radiance");
+ std::string rleHeader="#?RADIANCE\\nFORMAT=32-bit_rle_rgbe\\n\\n-Y 1 +X 8\\n";
+ std::vector<std::byte> rleHdr;for(unsigned char ch:rleHeader)rleHdr.push_back(static_cast<std::byte>(ch));
+ for(unsigned char ch:std::vector<unsigned char>{2,2,0,8,136,128,136,64,136,32,136,129})rleHdr.push_back(static_cast<std::byte>(ch));
+ const auto rleImage=mid::assets::decodeHdr(rleHdr);
+ check(rleImage.width==8&&rleImage.height==1&&std::abs(rleImage.pixels[0]-1.0F)<0.0001F&&std::abs(rleImage.pixels[28]-1.0F)<0.0001F,"Radiance HDR scanline RLE decodes repeated channel packets");
  const auto hdrPreview=mid::assets::decodeImage(hdr);
  check(hdrPreview.width==1&&hdrPreview.pixels.size()==4&&hdrPreview.pixels[3]==255,"generic image dispatcher tone-maps HDR to opaque RGBA8");
  check(mid::assets::hasHdrSupport(),"Radiance HDR decoder is always available");
