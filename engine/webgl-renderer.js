@@ -61,7 +61,8 @@ void main() {
   vec3 specular = D * G * F / max(4.0 * NdotV * max(NdotL, 0.001), 0.001);
   vec3 diffuse = (1.0 - F) * (1.0 - uMetallic) * vColor / 3.14159265;
   vec3 direct = (diffuse + specular) * NdotL;
-  vec3 ambient = vColor * uAmbient;
+  vec3 environment = mix(vec3(0.075, 0.065, 0.055), vec3(0.28, 0.36, 0.5), clamp(N.y * 0.5 + 0.5, 0.0, 1.0));
+  vec3 ambient = vColor * environment * uAmbient;
   gl_FragColor = vec4(ambient + direct, 1.0);
 }`;
 
@@ -241,39 +242,49 @@ export function createWebGLRenderer(canvas) {
       if(depth+radius<.1||depth-radius>150||Math.abs(dot(relative,right))>Math.max(0,depth)*tanH+radius||Math.abs(dot(relative,up))>Math.max(0,depth)*tanV+radius){culledObjects++;continue;}
       visibleObjects++;
       const tint=entity.id===selectedId?[1.2,1.24,.88]:entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
-      visible.push({entity,matrix:modelMatrix(entity),tint});
+      visible.push({entity,matrix:modelMatrix(entity),tint,metallic:entity.type==="light"?0.18:0.08,roughness:entity.type==="camera"?0.32:0.58});
     }
     let drawCalls=1;
     if(instancing&&visible.length){
-      // One GPU instanced draw for the editor's shared preview cube geometry.
-      const stride=19,data=new Float32Array(visible.length*stride);
-      visible.forEach((item,index)=>{data.set(item.matrix,index*stride);data.set(item.tint,index*stride+16);});
-      gl.bindBuffer(gl.ARRAY_BUFFER,instanceBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);
-      const attributes=[
-        [locations.instanceModel0,4,0],
-        [locations.instanceModel1,4,16],
-        [locations.instanceModel2,4,32],
-        [locations.instanceModel3,4,48],
-        [locations.instanceTint,3,64]
-      ];
-      for(const [location,size,offset] of attributes){
-        gl.enableVertexAttribArray(location);
-        gl.vertexAttribPointer(location,size,gl.FLOAT,false,stride*4,offset*4);
-        instancing.vertexAttribDivisorANGLE(location,1);
+      // Group by material factors, then draw each group as GPU instances.
+      const groups=new Map();
+      for(const item of visible){
+        const key=item.metallic+":"+item.roughness;
+        if(!groups.has(key))groups.set(key,[]);
+        groups.get(key).push(item);
       }
-      gl.uniform1f(locations.instanced,1);
-      gl.drawArraysInstancedANGLE(gl.TRIANGLES,0,CUBE_VERTICES.length/9,visible.length);
-      for(const [location] of attributes){instancing.vertexAttribDivisorANGLE(location,0);gl.disableVertexAttribArray(location);}
+      for(const group of groups.values()){
+        const stride=19,data=new Float32Array(group.length*stride);
+        group.forEach((item,index)=>{data.set(item.matrix,index*stride);data.set(item.tint,index*stride+16);});
+        gl.bindBuffer(gl.ARRAY_BUFFER,instanceBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);
+        const attributes=[
+          [locations.instanceModel0,4,0],
+          [locations.instanceModel1,4,16],
+          [locations.instanceModel2,4,32],
+          [locations.instanceModel3,4,48],
+          [locations.instanceTint,3,64]
+        ];
+        for(const [location,size,offset] of attributes){
+          gl.enableVertexAttribArray(location);
+          gl.vertexAttribPointer(location,size,gl.FLOAT,false,stride*4,offset*4);
+          instancing.vertexAttribDivisorANGLE(location,1);
+        }
+        gl.uniform1f(locations.metallic,group[0].metallic);
+        gl.uniform1f(locations.roughness,group[0].roughness);
+        gl.uniform1f(locations.instanced,1);
+        gl.drawArraysInstancedANGLE(gl.TRIANGLES,0,CUBE_VERTICES.length/9,group.length);
+        for(const [location] of attributes){instancing.vertexAttribDivisorANGLE(location,0);gl.disableVertexAttribArray(location);}
+        drawCalls++;
+      }
       gl.uniform1f(locations.instanced,0);
-      drawCalls++;
     } else {
       bindGeometry(gl,cubeBuffer,locations.position,locations.color,locations.normal);
       for(const item of visible){
         gl.uniformMatrix4fv(locations.model,false,item.matrix);
         gl.uniform3fv(locations.tint,item.tint);
-        gl.uniform1f(locations.metallic,item.entity.type==="light"?0.18:0.08);
-        gl.uniform1f(locations.roughness,item.entity.type==="camera"?0.32:0.58);
+        gl.uniform1f(locations.metallic,item.metallic);
+        gl.uniform1f(locations.roughness,item.roughness);
         gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
         drawCalls++;
       }
