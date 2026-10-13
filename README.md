@@ -34,7 +34,7 @@ ctest --test-dir build --build-config Release --output-on-failure
 - Basic 3D cube geometry, perspective camera, grid, mouse orbit, and wheel zoom
 - WebGL preview directional diffuse lighting with per-face normals and reduced redundant geometry uploads
 - Native renderer planning APIs for mesh/material batching, frustum culling, LOD selection, profiling, and deferred resource destruction
-- Async asset cache with LRU memory budget and explicit load failure/eviction states
+- Async asset cache with LRU memory budget, explicit load failure/eviction states, and a dependency-free Wavefront OBJ importer
 - Native scene-to-renderer bridge, fixed-step sphere physics, keyframe animation, CCD IK, and a bounded data-only script VM
 - Persistent scene/entity model with transforms and JSON serialization
 - Local HTTP API and OpenAPI contract for AI agents to inspect the project and perform allowlisted scene operations
