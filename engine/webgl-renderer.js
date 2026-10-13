@@ -164,7 +164,10 @@ export function createWebGLRenderer(canvas) {
     tint:gl.getUniformLocation(program,"uTint"),
     normal:gl.getAttribLocation(program,"aNormal"),
     lightDirection:gl.getUniformLocation(program,"uLightDirection"),
-    ambient:gl.getUniformLocation(program,"uAmbient"),\n    cameraPosition:gl.getUniformLocation(program,"uCameraPosition"),\n    metallic:gl.getUniformLocation(program,"uMetallic"),\n    roughness:gl.getUniformLocation(program,"uRoughness")
+    ambient:gl.getUniformLocation(program,"uAmbient"),
+    cameraPosition:gl.getUniformLocation(program,"uCameraPosition"),
+    metallic:gl.getUniformLocation(program,"uMetallic"),
+    roughness:gl.getUniformLocation(program,"uRoughness")
   };
   const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer();
   const gridVertices=createGridVertices();
@@ -217,7 +220,9 @@ export function createWebGLRenderer(canvas) {
       drawCalls++;
       gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
       const tint=entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
-      gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);\n      gl.uniform1f(locations.metallic,entity.type==="light"?0.18:0.08);\n      gl.uniform1f(locations.roughness,entity.type==="camera"?0.32:0.58);
+      gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);
+      gl.uniform1f(locations.metallic,entity.type==="light"?0.18:0.08);
+      gl.uniform1f(locations.roughness,entity.type==="camera"?0.32:0.58);
       gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
     }
     return { submitted:(scene?.entities||[]).length, visible:visibleObjects, culled:culledObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt };
