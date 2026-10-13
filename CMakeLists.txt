@@ -89,3 +89,17 @@ if(MID_ENGINE_BUILD_TESTS)
   endif()
  endforeach()
 endif()
+
+# Installable SDK payload: core library plus public C++ headers.
+include(GNUInstallDirs)
+install(TARGETS mid_engine_core
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY native/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+set(CPACK_PACKAGE_NAME "MidEngine")
+set(CPACK_PACKAGE_VENDOR "Mid Engine Project")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Mid Engine native C++ engine core and public headers")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "MidEngine")
+include(CPack)
