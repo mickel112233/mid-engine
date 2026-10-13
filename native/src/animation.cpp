@@ -85,6 +85,14 @@ void Animator::update(float delta){
 }
 const Skeleton& Animator::skeleton()const noexcept{return skeleton_;}
 float Animator::time()const noexcept{return time_;}
+AnimatorDebugSnapshot Animator::debugSnapshot()const{
+ AnimatorDebugSnapshot snapshot;snapshot.playing=clip_.has_value();snapshot.looping=looping_;snapshot.time=time_;
+ if(clip_){snapshot.clipName=clip_->name;snapshot.duration=clip_->duration;}
+ snapshot.worldPose=evaluateWorldPose(skeleton_);
+ snapshot.localPositions.reserve(skeleton_.joints.size());snapshot.localRotations.reserve(skeleton_.joints.size());snapshot.localScales.reserve(skeleton_.joints.size());
+ for(const auto& joint:skeleton_.joints){snapshot.localPositions.push_back(joint.position);snapshot.localRotations.push_back(joint.rotationDegrees);snapshot.localScales.push_back(joint.scale);}
+ return snapshot;
+}
 IkResult solveCcd(Skeleton& skeleton,const std::vector<std::size_t>& chain,Vec3f target,std::size_t maxIterations,float tolerance){
     return solveCcdConstrained(skeleton,chain,target,{},maxIterations,tolerance);
 }
