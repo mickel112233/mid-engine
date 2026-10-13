@@ -116,7 +116,7 @@ export function createWebGLRenderer(canvas) {
   };
   const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer();
   const gridVertices=createGridVertices();
-  let yaw=.78,pitch=.58,distance=11,dragging=false,lastX=0,lastY=0;
+  let yaw=.78,pitch=.58,distance=11,dragging=false,lastX=0,lastY=0,lastScene=null,lastSelectedId=null;
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
   gl.clearColor(.075,.083,.105,1);
@@ -124,7 +124,7 @@ export function createWebGLRenderer(canvas) {
   canvas.addEventListener("pointerup",()=>{dragging=false;});
   canvas.addEventListener("pointercancel",()=>{dragging=false;});
   canvas.addEventListener("pointermove",(event)=>{if(!dragging)return;yaw-=(event.clientX-lastX)*.008;pitch=Math.max(-1.25,Math.min(1.25,pitch+(event.clientY-lastY)*.008));lastX=event.clientX;lastY=event.clientY;});
-  canvas.addEventListener("wheel",(event)=>{event.preventDefault();distance=Math.max(3,Math.min(30,distance+event.deltaY*.015));},{passive:false});
+  canvas.addEventListener("wheel",(event)=>{event.preventDefault();distance=Math.max(3,Math.min(30,distance+event.deltaY*.015));if(lastScene)render(lastScene,lastSelectedId);},{passive:false});
   function resize() {
     const rect=canvas.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,2);
     const width=Math.max(1,Math.floor(rect.width*ratio)),height=Math.max(1,Math.floor(rect.height*ratio));
@@ -153,6 +153,6 @@ export function createWebGLRenderer(canvas) {
       gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/6);
     }
   }
-  window.addEventListener("resize",()=>{ if(window.__midEngineLastScene) render(window.__midEngineLastScene,window.__midEngineSelectedId); });
+  window.addEventListener("resize",()=>{ if(lastScene) render(lastScene,lastSelectedId); });
   return { render };
 }
