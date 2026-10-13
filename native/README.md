@@ -18,6 +18,10 @@ When CMake finds SDL2 development files, it also builds `mid_engine_desktop`. Ru
 
 Controls: left-drag to orbit, click an object to select it, WASD/QE to move the camera, F5 to toggle isolated play mode, Ctrl+Z/Ctrl+Y to undo/redo, and G to enable axis-constrained translation (X/Y/Z select the axis). The native axis drag is intentionally minimal and is not a rendered 3D gizmo.
 
+### Animation and physics debugging
+
+`animation::Animator` exposes sampled local channels, world poses, active clip/time, and cross-fade progress via `debugSnapshot()`. It now supports `pause()`, `resume()`, and deterministic `step(deltaSeconds)` while paused, which can drive an editor step/resume panel. The physics rigid body has angular velocity, torque, angular damping, and integrated orientation; inertia is currently approximated as a solid sphere, and the contact solver still does not implement full angular contact impulses, friction, or general-purpose joint constraints. These are foundational APIs, not a production rigid-body solver or visual animation graph editor.
+
 ## Current native slice
 
 - Stable, monotonically assigned entity IDs.
