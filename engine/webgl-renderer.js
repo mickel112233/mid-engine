@@ -162,6 +162,8 @@ export function createWebGLRenderer(canvas) {
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
     const eye=[distance*Math.cos(pitch)*Math.sin(yaw),distance*Math.sin(pitch),distance*Math.cos(pitch)*Math.cos(yaw)];
+    const forward=normalize([-eye[0],-eye[1],-eye[2]]),right=normalize(cross(forward,[0,1,0])),up=cross(right,forward);
+    const aspect=canvas.width/canvas.height,tanV=Math.tan(Math.PI/8),tanH=tanV*aspect;
     const viewProjection=multiply(perspective(Math.PI/4,canvas.width/canvas.height,.1,150),lookAt(eye,[0,0,0],[0,1,0]));
     gl.uniformMatrix4fv(locations.viewProjection,false,viewProjection);
     gl.uniformMatrix4fv(locations.model,false,IDENTITY);
@@ -173,10 +175,15 @@ export function createWebGLRenderer(canvas) {
     gl.drawArrays(gl.LINES,0,gridVertices.length/9);
     gl.enable(gl.CULL_FACE);
     bindGeometry(gl,cubeBuffer,locations.position,locations.color,locations.normal);
-    let visibleObjects=0;
+    let visibleObjects=0,culledObjects=0;
     let drawCalls=1;
     for(const entity of (scene?.entities||[])){
-      if(entity.enabled===false)continue;
+      if(entity.enabled===false){culledObjects++;continue;}
+      const transform=entity.transform||{},position=transform.position||[0,0,0],scale=transform.scale||[1,1,1];
+      const relative=[position[0]-eye[0],position[1]-eye[1],position[2]-eye[2]],depth=dot(relative,forward);
+      const factor=entity.type==="empty"?.22:entity.type==="light"?.35:1;
+      const radius=Math.max(Math.abs(scale[0]),Math.abs(scale[1]),Math.abs(scale[2]))*factor*1.75;
+      if(depth+radius<.1||depth-radius>150||Math.abs(dot(relative,right))>Math.max(0,depth)*tanH+radius||Math.abs(dot(relative,up))>Math.max(0,depth)*tanV+radius){culledObjects++;continue;}
       visibleObjects++;
       drawCalls++;
       gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
@@ -184,7 +191,7 @@ export function createWebGLRenderer(canvas) {
       gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);
       gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
     }
-    return { submitted:(scene?.entities||[]).length, visible:visibleObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt };
+    return { submitted:(scene?.entities||[]).length, visible:visibleObjects, culled:culledObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt };
   }
   window.addEventListener("resize",()=>{ if(lastScene) render(lastScene,lastSelectedId); });
   let destroyed=false;
