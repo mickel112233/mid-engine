@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 project(MidEngine VERSION 0.2.0 LANGUAGES CXX)
 option(MID_ENGINE_BUILD_TESTS "Build Mid Engine native tests" ON)
-add_library(mid_engine_core native/src/scene.cpp native/src/rendering.cpp native/src/pbr.cpp native/src/asset_manager.cpp native/src/editor_bridge.cpp native/src/physics.cpp native/src/animation.cpp native/src/script_runtime.cpp native/src/obj_importer.cpp native/src/mtl_importer.cpp native/src/editor_session.cpp native/src/image_decoder.cpp native/src/model_importer.cpp native/src/lua_runtime.cpp native/src/opengl33_device.cpp)
+add_library(mid_engine_core native/src/scene.cpp native/src/rendering.cpp native/src/pbr.cpp native/src/asset_manager.cpp native/src/editor_bridge.cpp native/src/physics.cpp native/src/animation.cpp native/src/script_runtime.cpp native/src/obj_importer.cpp native/src/mtl_importer.cpp native/src/editor_session.cpp native/src/image_decoder.cpp native/src/model_importer.cpp native/src/lua_runtime.cpp native/src/opengl33_device.cpp native/src/native_editor_runtime.cpp)
 add_library(MidEngine::Core ALIAS mid_engine_core)
 find_package(assimp CONFIG QUIET)
 if(TARGET assimp::assimp)
