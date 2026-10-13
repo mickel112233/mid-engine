@@ -10,6 +10,7 @@ int main(){
  check(std::abs(animator.skeleton().joints[2].position.x-1.5F)<.001F,"animation interpolates position keyframes");
  check(std::abs(animator.skeleton().joints[2].rotationDegrees.y-45.0F)<.01F,"animation interpolates rotation keyframes");
  mid::animation::Clip scaleClip;scaleClip.name="scale";scaleClip.duration=1;scaleClip.tracks={{2,{}, {}, {{0,{1,1,1}},{1,{3,2,1}}}}};animator.play(scaleClip,false);animator.update(.5F);check(std::abs(animator.skeleton().joints[2].scale.x-2.0F)<.001F&&std::abs(animator.skeleton().joints[2].scale.y-1.5F)<.001F,"animation interpolates scale keyframes");
+ const auto debugState=animator.debugSnapshot();check(debugState.playing&&debugState.clipName=="scale"&&std::abs(debugState.time-0.5F)<0.001F&&debugState.localScales.size()==3&&debugState.worldPose.joints.size()==3,"animation debugger snapshot exposes clip time, sampled local scale, and world pose");animator.stop();check(!animator.debugSnapshot().playing&&animator.debugSnapshot().clipName.empty(),"animation debugger reports stopped state after reset");
  auto constrainedSkeleton=skeleton;auto constrainedIk=mid::animation::solveCcdConstrained(constrainedSkeleton,{0,1,2},{1,1,0},{{1,{-180,-180,0},{180,180,0},45.0F}},64,.02F);check(!constrainedIk.converged&&std::abs(constrainedSkeleton.joints[1].rotationDegrees.z)<.01F,"CCD IK respects a zero-degree joint rotation limit");
  auto ik=mid::animation::solveCcd(skeleton,{0,1,2},{1,1,0},64,.02F);
  check(ik.finalError<.1F,"CCD IK moves the end effector toward target");
