@@ -52,7 +52,7 @@ ImportedModel importModelFile(const std::filesystem::path& path) {
   for(const auto& v:mesh.vertices){const float x=v.position.x-center.x,y=v.position.y-center.y,z=v.position.z-center.z;radius=std::max(radius,std::sqrt(x*x+y*y+z*z));}
   mesh.bounds={center,radius};
   for(unsigned int f=0;f<source->mNumFaces;++f){const auto& face=source->mFaces[f];if(face.mNumIndices!=3)continue;for(unsigned int k=0;k<3;++k)mesh.indices.push_back(face.mIndices[k]);}
-  mesh.validate();out.meshes.push_back(std::move(mesh));
+  mesh.validate();out.meshMaterialIndices.push_back(source->mMaterialIndex);out.meshes.push_back(std::move(mesh));
  }
  if(out.meshes.empty()) throw std::runtime_error("Model import produced no triangle meshes");
  if(scene->mNumTextures>0)out.warnings.emplace_back("Embedded textures are reported by Assimp but must be extracted/decoded by the asset pipeline.");
