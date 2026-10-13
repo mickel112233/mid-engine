@@ -57,3 +57,23 @@ For a reproducible verification, use the current GitHub Actions run linked from 
 - `mid/opengl33_device.hpp`: a concrete native OpenGL 3.3 core renderer with host-loaded GL dispatch, GPU mesh/material registries, RGBA8 texture upload/binding, Cook-Torrance-style shading, and instanced draw batches. The host must create a current GL context and supply a complete function table. Optional native directional depth-map shadows and GPU elapsed-time queries activate when the host provides the corresponding GL entry points.
 
 - `mid/native_editor_runtime.hpp`: selects the editor or play-mode scene, resolves hierarchical world matrices, builds a render plan, submits it through the native OpenGL device, and returns render/GPU timing stats. The host still owns window/context creation, viewport updates, input, and asset/material registration.
+
+## Optional native desktop host
+
+When SDL2 development files are available, CMake builds `mid/native_desktop_host.hpp` and the SDL2 host into `MidEngine::Core` (`MID_ENGINE_WITH_SDL2=1`). The host creates a resizable SDL window with an OpenGL 3.3 core context, loads the renderer's GL dispatch, keeps the viewport and camera aspect ratio synchronized on resize, handles close/play-mode/undo-redo/navigation input, and exposes mesh/material/texture registration helpers.
+
+Minimal integration shape:
+
+```cpp
+mid::editor::EditorSession session;
+mid::editor::SceneRenderBridge bridge;
+std::unordered_map<mid::render::ResourceId, mid::render::Material> materials;
+mid::platform::NativeDesktopHost host(session, bridge, materials);
+const auto entity = session.editScene().createEntity("Triangle");
+// Register a validated MeshData and Material with host.registerRenderable(...).
+while (host.pumpEvents()) {
+    host.frame(1.0F / 60.0F);
+}
+```
+
+Controls: WASD/QE move the camera, F5 toggles isolated play mode, Ctrl+Z/Ctrl+Y undo/redo, and G enables axis-constrained mouse dragging for the selected entity (set it with `setSelectedEntity`; X/Y/Z choose the axis). The current gizmo interaction is functional but deliberately minimal: it does not yet draw an on-screen axis widget or implement viewport ray picking. Native window creation/rendering requires a working desktop display and OpenGL 3.3 driver, so headless CI can compile and test the host but cannot prove a real hardware-rendered frame.
