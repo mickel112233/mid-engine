@@ -20,7 +20,7 @@ public:
  NativeDesktopHost& operator=(const NativeDesktopHost&)=delete;
  void registerRenderable(EntityId entity,render::ResourceId meshId,render::ResourceId materialId,
   const render::MeshData& mesh,const render::Material& material,render::SphereBounds bounds={});
- void registerTexture(render::ResourceId textureId,render::ResourceId materialId,const ImageRgba8& image);
+ void registerTexture(render::ResourceId textureId,render::ResourceId materialId,const assets::ImageRgba8& image);
  void registerTextureFile(render::ResourceId textureId,render::ResourceId materialId,const std::string& path);
  [[nodiscard]] bool pumpEvents();
  [[nodiscard]] render::RenderStats frame(float elapsedSeconds);
