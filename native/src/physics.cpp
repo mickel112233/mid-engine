@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -16,6 +17,14 @@ float length(Vec3f a){return std::sqrt(dot(a,a));}
 bool finite(Vec3f a){return std::isfinite(a.x)&&std::isfinite(a.y)&&std::isfinite(a.z);}
 struct Cell { int x,y,z; bool operator==(const Cell&) const = default; };
 struct CellHash { std::size_t operator()(const Cell& c) const noexcept { return std::hash<int>{}(c.x) ^ (std::hash<int>{}(c.y)<<1U) ^ (std::hash<int>{}(c.z)<<2U); } };
+int cellCoordinate(float value) {
+    const double cell=std::floor(static_cast<double>(value)/2.0);
+    constexpr int minCell=std::numeric_limits<int>::min()/2;
+    constexpr int maxCell=std::numeric_limits<int>::max()/2;
+    if(!std::isfinite(cell)||cell<static_cast<double>(minCell)||cell>static_cast<double>(maxCell))
+        throw std::runtime_error("Rigid body position exceeds safe broadphase coordinate range");
+    return static_cast<int>(cell);
+}
 }
 PhysicsWorld::PhysicsWorld(Vec3f gravity,float fixedStep):gravity_(gravity),fixedStep_(fixedStep) {
     if(!finite(gravity)||!std::isfinite(fixedStep)||fixedStep<=0.0F) throw std::invalid_argument("Physics gravity and fixed step must be finite; step must be positive");
@@ -128,9 +137,9 @@ void PhysicsWorld::step() {
     constexpr float cellSize=2.0F;
     for(std::size_t i=0;i<bodies_.size();++i){
         const auto& b=bodies_[i];
-        const int minX=static_cast<int>(std::floor((b.position.x-b.radius)/cellSize)),maxX=static_cast<int>(std::floor((b.position.x+b.radius)/cellSize));
-        const int minY=static_cast<int>(std::floor((b.position.y-b.radius)/cellSize)),maxY=static_cast<int>(std::floor((b.position.y+b.radius)/cellSize));
-        const int minZ=static_cast<int>(std::floor((b.position.z-b.radius)/cellSize)),maxZ=static_cast<int>(std::floor((b.position.z+b.radius)/cellSize));
+        const int minX=cellCoordinate(b.position.x-b.radius),maxX=cellCoordinate(b.position.x+b.radius);
+        const int minY=cellCoordinate(b.position.y-b.radius),maxY=cellCoordinate(b.position.y+b.radius);
+        const int minZ=cellCoordinate(b.position.z-b.radius),maxZ=cellCoordinate(b.position.z+b.radius);
         if(maxX-minX>64||maxY-minY>64||maxZ-minZ>64) throw std::runtime_error("Rigid body exceeds safe broadphase cell span");
         for(int x=minX;x<=maxX;++x)for(int y=minY;y<=maxY;++y)for(int z=minZ;z<=maxZ;++z)grid[{x,y,z}].push_back(i);
     }
