@@ -1,6 +1,7 @@
 #include "mid/physics.hpp"
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 int main(){
  int failures=0;auto check=[&](bool ok,const char* m){if(!ok){std::cerr<<"FAIL: "<<m<<'\n';++failures;}};
@@ -35,5 +36,7 @@ int main(){
   mid::physics::PhysicsWorld boxBounce({0,0,0});mid::physics::RigidBody boxBall;boxBall.entityId=74;boxBall.position={0.4F,0,0};boxBall.velocity={-2,0,0};boxBall.radius=0.5F;boxBall.restitution=0.8F;boxBounce.addBody(boxBall);boxBounce.addBox({{{-1,-1,-1},{0,1,1}},0.0F});boxBounce.advance(1.0F/60.0F);check(boxBounce.body(74)->velocity.x>0.0F,"body restitution is honored against a zero-restitution box");
   mid::physics::PhysicsWorld capsuleBounce({0,0,0});mid::physics::RigidBody capsuleBall;capsuleBall.entityId=75;capsuleBall.position={0.4F,0,0};capsuleBall.velocity={-2,0,0};capsuleBall.radius=0.5F;capsuleBall.restitution=0.8F;capsuleBounce.addBody(capsuleBall);capsuleBounce.addCapsule({{0,-1,0},{0,1,0},0.5F,0.0F});capsuleBounce.advance(1.0F/60.0F);check(capsuleBounce.body(75)->velocity.x>0.0F,"body restitution is honored against a zero-restitution capsule");
   mid::physics::PhysicsWorld extremeWorld({0,0,0});mid::physics::RigidBody extreme;extreme.entityId=81;extreme.position={1.0e30F,0,0};extremeWorld.addBody(extreme);bool extremeRejected=false;try{extremeWorld.advance(1.0F/60.0F);}catch(const std::runtime_error&){extremeRejected=true;}check(extremeRejected,"out-of-range broadphase coordinates fail safely before float-to-int conversion");
+  mid::physics::PhysicsWorld angularWorld({0,0,0});mid::physics::RigidBody spinner;spinner.entityId=91;spinner.radius=1.0F;spinner.angularDamping=0.0F;angularWorld.addBody(spinner);angularWorld.applyTorque(91,{0,2,0});angularWorld.advance(1.0F/60.0F);check(angularWorld.body(91)->angularVelocity.y>0.0F&&angularWorld.body(91)->rotationDegrees.y>0.0F,"applied torque integrates angular velocity and orientation");
+  bool invalidTorque=false;try{angularWorld.applyTorque(91,{std::numeric_limits<float>::infinity(),0,0});}catch(const std::invalid_argument&){invalidTorque=true;}check(invalidTorque,"non-finite torque is rejected");
   if(failures)return 1;std::cout<<"Native physics tests passed\n";return 0;
 }
