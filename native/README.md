@@ -53,3 +53,5 @@ Additional native modules: `mid/pbr.hpp` provides a CPU Cook-Torrance/GGX shadin
 - The WebGL editor viewport supports ANGLE instanced draws where available, optional depth-texture directional shadows, hemisphere ambient lighting, and asynchronous GPU timer-query profiling. These are viewport features; they do not yet constitute a native C++ GPU backend.
 
 For a reproducible verification, use the current GitHub Actions run linked from the repository's Actions tab. Do not assume every optional dependency is present on every platform.
+
+- `mid/opengl33_device.hpp`: a concrete native OpenGL 3.3 core renderer with host-loaded GL dispatch, GPU mesh/material registries, RGBA8 texture upload/binding, Cook-Torrance-style shading, and instanced draw batches. The host must create a current GL context and supply a complete function table. The browser viewport's shadow-map path is separate; native shadow maps and GPU timer-query profiling are not yet wired into this backend.
