@@ -64,6 +64,14 @@ void PhysicsWorld::addDistanceJoint(DistanceJoint joint) {
     joints_.push_back(joint);
 }
 void PhysicsWorld::clearDistanceJoints() noexcept { joints_.clear(); }
+void PhysicsWorld::addRopeJoint(RopeJoint joint) {
+    if(joint.a==0||joint.b==0||joint.a==joint.b||!body(joint.a)||!body(joint.b)||
+       !std::isfinite(joint.maxLength)||joint.maxLength<0.0F||!std::isfinite(joint.stiffness)||joint.stiffness<0.0F||
+       !std::isfinite(joint.damping)||joint.damping<0.0F)
+        throw std::invalid_argument("Rope joint requires two existing bodies and finite non-negative parameters");
+    ropes_.push_back(joint);
+}
+void PhysicsWorld::clearRopeJoints() noexcept { ropes_.clear(); }
 void PhysicsWorld::applyForce(std::uint64_t id,Vec3f force) {
     auto* b=body(id);if(!b)throw std::out_of_range("Rigid body does not exist");
     if(!finite(force))throw std::invalid_argument("Force must be finite");
@@ -92,6 +100,17 @@ void PhysicsWorld::step() {
         const Vec3f force=mul(direction,magnitude);
         if(!a->kinematic&&a->inverseMass>0.0F) a->force=add(a->force,force);
         if(!b->kinematic&&b->inverseMass>0.0F) b->force=sub(b->force,force);
+    }
+    // Rope constraints only pull when stretched beyond their maximum length.
+    for(const auto& joint:ropes_) {
+        auto* a=body(joint.a);auto* b=body(joint.b);if(!a||!b)continue;
+        const Vec3f delta=sub(b->position,a->position);const float distance=length(delta);
+        if(distance<=joint.maxLength||distance<1.0e-6F)continue;
+        const Vec3f direction=mul(delta,1.0F/distance);const float relativeSpeed=dot(sub(b->velocity,a->velocity),direction);
+        const float magnitude=joint.stiffness*(distance-joint.maxLength)+joint.damping*std::max(0.0F,relativeSpeed);
+        const Vec3f force=mul(direction,magnitude);
+        if(!a->kinematic&&a->inverseMass>0.0F)a->force=add(a->force,force);
+        if(!b->kinematic&&b->inverseMass>0.0F)b->force=sub(b->force,force);
     }
     stats_={}; stats_.bodies=bodies_.size();
     for(auto& b:bodies_) {
