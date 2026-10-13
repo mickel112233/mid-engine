@@ -3,7 +3,7 @@
 #include <iostream>
 int main(){
  int failures=0;auto check=[&](bool ok,const char* m){if(!ok){std::cerr<<"FAIL: "<<m<<'\n';++failures;}};
- mid::render::pbr::Surface surface;mid::render::pbr::Lighting light;
+ mid::render::pbr::Surface surface;mid::render::pbr::Lighting light;light.viewDirection={0,1,1};
  const auto lit=mid::render::pbr::evaluate(surface,light);
  check(std::isfinite(lit.x)&&std::isfinite(lit.y)&&std::isfinite(lit.z),"PBR output is finite");
  check(lit.x>0&&lit.y>0&&lit.z>0,"direct and ambient lighting contribute");
