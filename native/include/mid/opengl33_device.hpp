@@ -16,7 +16,7 @@ struct Functions {
  UInt (*CreateProgram)(){}; void (*AttachShader)(UInt,UInt){}; void (*LinkProgram)(UInt){}; void (*GetProgramiv)(UInt,Enum,Int*){}; void (*GetProgramInfoLog)(UInt,Sizei,Sizei*,Char*){}; void (*DeleteProgram)(UInt){}; void (*UseProgram)(UInt){};
  Int (*GetUniformLocation)(UInt,const Char*){}; void (*UniformMatrix4fv)(Int,Sizei,Boolean,const Float*){}; void (*Uniform3f)(Int,Float,Float,Float){}; void (*Uniform4f)(Int,Float,Float,Float,Float){}; void (*Uniform1f)(Int,Float){}; void (*Uniform1i)(Int,Int){};
  void (*DrawElementsInstanced)(Enum,Sizei,Enum,const void*,Sizei){}; void (*DrawElements)(Enum,Sizei,Enum,const void*){};
- void (*Enable)(Enum){}; void (*DepthFunc)(Enum){}; void (*Clear)(Enum){}; void (*ClearColor)(Float,Float,Float,Float){}; void (*Viewport)(Int,Int,Sizei,Sizei){};
+ void (*Enable)(Enum){}; void (*Disable)(Enum){}; void (*BlendFunc)(Enum,Enum){}; void (*DepthMask)(Boolean){}; void (*DepthFunc)(Enum){}; void (*Clear)(Enum){}; void (*ClearColor)(Float,Float,Float,Float){}; void (*Viewport)(Int,Int,Sizei,Sizei){};
  void (*GenTextures)(Sizei,UInt*){}; void (*DeleteTextures)(Sizei,const UInt*){}; void (*BindTexture)(Enum,UInt){}; void (*TexImage2D)(Enum,Int,Int,Sizei,Sizei,Int,Enum,Enum,const void*){}; void (*TexParameteri)(Enum,Enum,Int){}; void (*ActiveTexture)(Enum){};
 };
 class OpenGL33Device final : public RenderDevice {
