@@ -9,6 +9,7 @@ int main(){
  mid::animation::Animator animator(skeleton);animator.play(clip,false);animator.update(.5F);
  check(std::abs(animator.skeleton().joints[2].position.x-1.5F)<.001F,"animation interpolates position keyframes");
  check(std::abs(animator.skeleton().joints[2].rotationDegrees.y-45.0F)<.01F,"animation interpolates rotation keyframes");
+ auto constrainedSkeleton=skeleton;auto constrainedIk=mid::animation::solveCcdConstrained(constrainedSkeleton,{0,1,2},{1,1,0},{{1,{-180,-180,0},{180,180,0},45.0F}},64,.02F);check(!constrainedIk.converged&&std::abs(constrainedSkeleton.joints[1].rotationDegrees.z)<.01F,"CCD IK respects a zero-degree joint rotation limit");
  auto ik=mid::animation::solveCcd(skeleton,{0,1,2},{1,1,0},64,.02F);
  check(ik.finalError<.1F,"CCD IK moves the end effector toward target");
  mid::Scene scene;auto entity=scene.createEntity("scripted");
