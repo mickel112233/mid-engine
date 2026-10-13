@@ -48,7 +48,7 @@ function addEvent(type, message, data = {}) {
   if (events.length > 200) events.length = 200;
   return event;
 }
-const context = {
+export const context = {
   getScene: () => scene,
   setScene: (next) => { validateScene(next); scene = next; saveScene(); },
   getAssets: () => assets,
