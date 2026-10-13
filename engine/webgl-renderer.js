@@ -181,7 +181,7 @@ export function createWebGLRenderer(canvas) {
       if(entity.enabled===false){culledObjects++;continue;}
       const transform=entity.transform||{},position=transform.position||[0,0,0],scale=transform.scale||[1,1,1];
       const relative=[position[0]-eye[0],position[1]-eye[1],position[2]-eye[2]],depth=dot(relative,forward);
-      const factor=entity.type==="empty"?.22:entity.type==="light"?.35:1;
+      const factor=entity.type==="empty" ? 0.22 : entity.type==="light" ? 0.35 : 1;
       const radius=Math.max(Math.abs(scale[0]),Math.abs(scale[1]),Math.abs(scale[2]))*factor*1.75;
       if(depth+radius<.1||depth-radius>150||Math.abs(dot(relative,right))>Math.max(0,depth)*tanH+radius||Math.abs(dot(relative,up))>Math.max(0,depth)*tanV+radius){culledObjects++;continue;}
       visibleObjects++;
