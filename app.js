@@ -50,6 +50,11 @@ function log(message) {
   $("#activity-log").prepend(line);
 }
 function currentEntity() { return scene?.entities.find((entity) => entity.id === selectedId) || null; }
+$("#scene-canvas").addEventListener("mid-engine-pick", (event) => {
+  if (isPlaying) return;
+  selectedId = event.detail?.entityId || null;
+  render();
+});
 function render() {
   if (!scene) return;
   $("#project-name").textContent = scene.name;
