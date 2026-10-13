@@ -11,7 +11,7 @@ using Enum=std::uint32_t; using UInt=std::uint32_t; using Int=std::int32_t; usin
 struct Functions {
  void (*GenBuffers)(Sizei,UInt*){}; void (*DeleteBuffers)(Sizei,const UInt*){}; void (*BindBuffer)(Enum,UInt){}; void (*BufferData)(Enum,Sizeiptr,const void*,Enum){};
  void (*GenVertexArrays)(Sizei,UInt*){}; void (*DeleteVertexArrays)(Sizei,const UInt*){}; void (*BindVertexArray)(UInt){};
- void (*EnableVertexAttribArray)(UInt){}; void (*VertexAttribPointer)(UInt,Int,Enum,Boolean,Sizei,const void*){}; void (*VertexAttribDivisor)(UInt,UInt){};
+ void (*EnableVertexAttribArray)(UInt){}; void (*DisableVertexAttribArray)(UInt){}; void (*VertexAttribPointer)(UInt,Int,Enum,Boolean,Sizei,const void*){}; void (*VertexAttribDivisor)(UInt,UInt){};
  UInt (*CreateShader)(Enum){}; void (*ShaderSource)(UInt,Sizei,const Char* const*,const Int*){}; void (*CompileShader)(UInt){}; void (*GetShaderiv)(UInt,Enum,Int*){}; void (*GetShaderInfoLog)(UInt,Sizei,Sizei*,Char*){}; void (*DeleteShader)(UInt){};
  UInt (*CreateProgram)(){}; void (*AttachShader)(UInt,UInt){}; void (*LinkProgram)(UInt){}; void (*GetProgramiv)(UInt,Enum,Int*){}; void (*GetProgramInfoLog)(UInt,Sizei,Sizei*,Char*){}; void (*DeleteProgram)(UInt){}; void (*UseProgram)(UInt){};
  Int (*GetUniformLocation)(UInt,const Char*){}; void (*UniformMatrix4fv)(Int,Sizei,Boolean,const Float*){}; void (*Uniform3f)(Int,Float,Float,Float){}; void (*Uniform4f)(Int,Float,Float,Float,Float){}; void (*Uniform1f)(Int,Float){}; void (*Uniform1i)(Int,Int){};
