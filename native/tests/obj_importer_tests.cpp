@@ -1,6 +1,7 @@
 #include "mid/obj_importer.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <string>
 int main(){
  int failures=0;auto check=[&](bool ok,const char* m){if(!ok){std::cerr<<"FAIL: "<<m<<'\n';++failures;}};
  const std::string obj="# square\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvt 0 1\nf 1/1 2/2 3/3 4/4\n";
