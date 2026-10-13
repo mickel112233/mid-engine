@@ -141,22 +141,26 @@ void PhysicsWorld::step() {
     }}
     stats_.broadphaseCandidates=pairs.size();
     std::vector<std::uint64_t> sortedPairs(pairs.begin(),pairs.end());std::sort(sortedPairs.begin(),sortedPairs.end());
-    for(const auto pair:sortedPairs) {
+    // Sequential impulse/position solver iterates contacts to reduce residual overlap
+    // in piles instead of applying a single order-dependent correction pass.
+    constexpr unsigned solverIterations=6;
+    for(unsigned iteration=0;iteration<solverIterations;++iteration)for(const auto pair:sortedPairs) {
         const auto i=static_cast<std::size_t>(pair>>32U),j=static_cast<std::size_t>(pair&0xffffffffULL);
         if(i>=bodies_.size()||j>=bodies_.size())continue;
         auto& a=bodies_[i];auto& b=bodies_[j];
-        ++stats_.narrowphaseTests;
+        if(iteration==0)++stats_.narrowphaseTests;
         if((a.kinematic||a.inverseMass==0.0F)&&(b.kinematic||b.inverseMass==0.0F))continue;
         const Vec3f delta=sub(b.position,a.position);const float distance=length(delta),sum=a.radius+b.radius;
         if(distance>=sum)continue;
         const Vec3f normal=distance>1.0e-6F?mul(delta,1.0F/distance):Vec3f{1,0,0};
-        const float penetration=sum-distance;contacts_.push_back({a.entityId,b.entityId,normal,penetration});
+        const float penetration=sum-distance;
+        if(iteration==0)contacts_.push_back({a.entityId,b.entityId,normal,penetration});
         const float invA=(a.kinematic?0.0F:a.inverseMass),invB=(b.kinematic?0.0F:b.inverseMass),total=invA+invB;
         if(total<=0.0F)continue;
-        const Vec3f correction=mul(normal,penetration/total*0.8F);
+        const Vec3f correction=mul(normal,penetration/total*0.25F);
         a.position=sub(a.position,mul(correction,invA));b.position=add(b.position,mul(correction,invB));
         const Vec3f relative=sub(b.velocity,a.velocity);const float along=dot(relative,normal);
-        if(along<0.0F){const float restitution=std::min(a.restitution,b.restitution);const float impulse=-(1.0F+restitution)*along/total;
+        if(along< -1.0e-4F){const float restitution=std::min(a.restitution,b.restitution);const float impulse=-(1.0F+restitution)*along/total;
             const Vec3f impulseVector=mul(normal,impulse);a.velocity=sub(a.velocity,mul(impulseVector,invA));b.velocity=add(b.velocity,mul(impulseVector,invB));}
     }
     for(auto& body:bodies_) if(!body.kinematic&&body.inverseMass>0.0F) for(const auto& plane:planes_) {
