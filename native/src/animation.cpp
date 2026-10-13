@@ -80,15 +80,22 @@ std::vector<Vertex> skinMesh(const Skeleton& skeleton,const std::vector<Vertex>&
  return out;
 }
 Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
-void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;blending_=false;blendDuration_=blendElapsed_=0.0F;}
+void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;paused_=false;blending_=false;blendDuration_=blendElapsed_=0.0F;}
 void Animator::crossFade(const Clip& clip,float blendDuration,bool looping){
  if(!std::isfinite(blendDuration)||blendDuration<=0.0F)throw std::invalid_argument("Animation cross-fade duration must be finite and positive");
- clip.validate(skeleton_);blendSource_=skeleton_;clip_=clip;time_=0;looping_=looping;blendDuration_=blendDuration;blendElapsed_=0.0F;blending_=true;
+ clip.validate(skeleton_);blendSource_=skeleton_;clip_=clip;time_=0;looping_=looping;paused_=false;blendDuration_=blendDuration;blendElapsed_=0.0F;blending_=true;
 }
-void Animator::stop()noexcept{clip_.reset();time_=0;blending_=false;blendDuration_=blendElapsed_=0.0F;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
+void Animator::stop()noexcept{clip_.reset();time_=0;paused_=false;blending_=false;blendDuration_=blendElapsed_=0.0F;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
+void Animator::pause()noexcept{paused_=true;}
+void Animator::resume()noexcept{paused_=false;}
+bool Animator::paused()const noexcept{return paused_;}
+void Animator::step(float delta){
+    if(!std::isfinite(delta)||delta<0)throw std::invalid_argument("Animation step must be finite and non-negative");
+    const bool wasPaused=paused_;paused_=false;try{update(delta);}catch(...){paused_=wasPaused;throw;}paused_=wasPaused;
+}
 void Animator::update(float delta){
     if(!std::isfinite(delta)||delta<0)throw std::invalid_argument("Animation delta must be finite and non-negative");
-    if(!clip_) return;
+    if(paused_||!clip_) return;
     time_+=delta;
     if(clip_->duration>0){if(looping_)time_=std::fmod(time_,clip_->duration);else time_=std::min(time_,clip_->duration);}
     for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}
@@ -108,7 +115,7 @@ void Animator::update(float delta){
 const Skeleton& Animator::skeleton()const noexcept{return skeleton_;}
 float Animator::time()const noexcept{return time_;}
 AnimatorDebugSnapshot Animator::debugSnapshot()const{
- AnimatorDebugSnapshot snapshot;snapshot.playing=clip_.has_value();snapshot.looping=looping_;snapshot.time=time_;
+ AnimatorDebugSnapshot snapshot;snapshot.playing=clip_.has_value();snapshot.looping=looping_;snapshot.paused=paused_;snapshot.time=time_;
  if(clip_){snapshot.clipName=clip_->name;snapshot.duration=clip_->duration;}
  snapshot.blending=blending_;snapshot.blendProgress=blending_&&blendDuration_>0.0F?blendElapsed_/blendDuration_:1.0F;
  snapshot.worldPose=evaluateWorldPose(skeleton_);
