@@ -13,6 +13,7 @@ struct PlaneCollider { Vec3f normal{0,1,0}; float offset{0}; float restitution{0
 struct BoxCollider { Aabb bounds{}; float restitution{0}; };
 struct CapsuleCollider { Vec3f a{0,-0.5F,0}; Vec3f b{0,0.5F,0}; float radius{0.5F}; float restitution{0}; };
 struct DistanceJoint { std::uint64_t a{0}; std::uint64_t b{0}; float restLength{1}; float stiffness{20}; float damping{1}; };
+struct RopeJoint { std::uint64_t a{0}; std::uint64_t b{0}; float maxLength{1}; float stiffness{40}; float damping{2}; };
 struct RigidBody {
     std::uint64_t entityId{0};
     Vec3f position{};
@@ -43,6 +44,8 @@ public:
     void clearCapsules() noexcept;
     void addDistanceJoint(DistanceJoint joint);
     void clearDistanceJoints() noexcept;
+    void addRopeJoint(RopeJoint joint);
+    void clearRopeJoints() noexcept;
     void applyForce(std::uint64_t entityId,Vec3f force);
     // Accumulates elapsed time, simulates fixed steps, and caps catch-up work.
     std::size_t advance(float elapsedSeconds,std::size_t maxSubsteps=8);
@@ -60,6 +63,7 @@ private:
     std::vector<BoxCollider> boxes_;
     std::vector<CapsuleCollider> capsules_;
     std::vector<DistanceJoint> joints_;
+    std::vector<RopeJoint> ropes_;
     std::vector<Contact> contacts_;
     PhysicsStats stats_{};
 };
