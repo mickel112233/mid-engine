@@ -84,16 +84,71 @@ function serveStatic(pathname, response) {
 
 const OPENAPI = {
   openapi: "3.1.0",
-  info: { title: "Mid Engine Local Agent API", version: "0.1.0", description: "Local-first scene editor and agent tool API. Mutations are schema-validated; deletion requires explicit confirmation." },
+  info: {
+    title: "Mid Engine Local Agent API",
+    version: "0.1.0",
+    description: "Local-first scene editor and agent tool API. Mutations are validated; deletion requires explicit confirmation."
+  },
   servers: [{ url: "http://127.0.0.1:4173" }],
   paths: {
-    "/api/health": { get: { operationId: "health", responses: { "200": { description: "Engine readiness" } } } },
-    "/api/scene": { get: { operationId: "getScene", responses: { "200": { description: "Current scene and assets" } } } },
-    "/api/tools": { get: { operationId: "listTools", responses: { "200": { description: "Tool manifest and safety metadata" } } } },
-    "/api/events": { get: { operationId: "getEvents", responses: { "200": { description: "Recent engine events" } } } },
-    "/api/tools/execute": { post: { operationId: "executeTool", requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["name"], properties: { name: { type: "string" }, args: { type: "object" } } } } } }, responses: { "200": { description: "Structured tool result" }, "403": { description: "Approval required or origin rejected" }, "422": { description: "Invalid operation" } } } },
-    "/api/agent/command": { post: { operationId: "interpretCommand", requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["command"], properties: { command: { type: "string" } } } } } }, responses: { "200": { description: "Command result" }, "400": { description: "Unsupported command" } } },
-    "/api/save": { post: { operationId: "saveScene", responses: { "200": { description: "Persisted scene" } } } }
+    "/api/health": {
+      get: { operationId: "health", responses: { "200": { description: "Engine readiness" } } }
+    },
+    "/api/scene": {
+      get: { operationId: "getScene", responses: { "200": { description: "Current scene and assets" } } }
+    },
+    "/api/tools": {
+      get: { operationId: "listTools", responses: { "200": { description: "Tool manifest and safety metadata" } } }
+    },
+    "/api/events": {
+      get: { operationId: "getEvents", responses: { "200": { description: "Recent engine events" } } }
+    },
+    "/api/tools/execute": {
+      post: {
+        operationId: "executeTool",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name"],
+                properties: { name: { type: "string" }, args: { type: "object" } }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Structured tool result" },
+          "403": { description: "Approval required or origin rejected" },
+          "422": { description: "Invalid operation" }
+        }
+      }
+    },
+    "/api/agent/command": {
+      post: {
+        operationId: "interpretCommand",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["command"],
+                properties: { command: { type: "string" } }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Command result" },
+          "400": { description: "Unsupported command" }
+        }
+      }
+    },
+    "/api/save": {
+      post: { operationId: "saveScene", responses: { "200": { description: "Persisted scene" } } }
+    }
   }
 };
 
