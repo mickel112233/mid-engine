@@ -160,7 +160,7 @@ void PhysicsWorld::step() {
         const Vec3f correction=mul(normal,penetration/total*0.25F);
         a.position=sub(a.position,mul(correction,invA));b.position=add(b.position,mul(correction,invB));
         const Vec3f relative=sub(b.velocity,a.velocity);const float along=dot(relative,normal);
-        if(along< -1.0e-4F){const float restitution=std::min(a.restitution,b.restitution);const float impulse=-(1.0F+restitution)*along/total;
+        if(along< -1.0e-4F){const float restitution=std::max(a.restitution,b.restitution);const float impulse=-(1.0F+restitution)*along/total;
             const Vec3f impulseVector=mul(normal,impulse);a.velocity=sub(a.velocity,mul(impulseVector,invA));b.velocity=add(b.velocity,mul(impulseVector,invB));}
     }
     for(auto& body:bodies_) if(!body.kinematic&&body.inverseMass>0.0F) for(const auto& plane:planes_) {
@@ -168,7 +168,7 @@ void PhysicsWorld::step() {
         if(distance>=body.radius) continue;
         const float penetration=body.radius-distance; body.position=add(body.position,mul(plane.normal,penetration));
         const float normalVelocity=dot(body.velocity,plane.normal);
-        if(normalVelocity<0.0F) body.velocity=sub(body.velocity,mul(plane.normal,(1.0F+plane.restitution)*normalVelocity));
+        if(normalVelocity<0.0F) body.velocity=sub(body.velocity,mul(plane.normal,(1.0F+std::max(body.restitution,plane.restitution))*normalVelocity));
         contacts_.push_back({body.entityId,0,plane.normal,penetration});
     }
     for(auto& body:bodies_) if(!body.kinematic&&body.inverseMass>0.0F) for(const auto& box:boxes_) {
@@ -189,7 +189,7 @@ void PhysicsWorld::step() {
         }
         body.position=add(body.position,mul(normal,penetration));
         const float vn=dot(body.velocity,normal);
-        if(vn<0.0F) body.velocity=sub(body.velocity,mul(normal,(1.0F+std::min(body.restitution,box.restitution))*vn));
+        if(vn<0.0F) body.velocity=sub(body.velocity,mul(normal,(1.0F+std::max(body.restitution,box.restitution))*vn));
         contacts_.push_back({body.entityId,0,normal,penetration});
     }
     for(auto& body:bodies_) if(!body.kinematic&&body.inverseMass>0.0F) for(const auto& capsule:capsules_) {
@@ -199,7 +199,7 @@ void PhysicsWorld::step() {
         if(distance>=sum)continue;
         const Vec3f normal=distance>1.0e-6F?mul(delta,1.0F/distance):Vec3f{1,0,0};const float penetration=sum-distance;
         body.position=add(body.position,mul(normal,penetration));const float vn=dot(body.velocity,normal);
-        if(vn<0.0F)body.velocity=sub(body.velocity,mul(normal,(1.0F+std::min(body.restitution,capsule.restitution))*vn));
+        if(vn<0.0F)body.velocity=sub(body.velocity,mul(normal,(1.0F+std::max(body.restitution,capsule.restitution))*vn));
         contacts_.push_back({body.entityId,0,normal,penetration});
     }
     stats_.contacts=contacts_.size();
