@@ -16,6 +16,7 @@ const STATIC_FILES = new Map([
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
+  ["/engine/webgl-renderer.js", ["engine/webgl-renderer.js", "text/javascript; charset=utf-8"]],
   ["/openapi.json", ["openapi.json", "application/json; charset=utf-8"]]
 ]);
 
