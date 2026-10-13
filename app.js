@@ -42,7 +42,7 @@ function render() {
   window.__midEngineLastScene = scene;
   window.__midEngineSelectedId = selectedId;
   const stats = renderer?.render(scene, selectedId);
-  if (stats) $("#render-stats").textContent = `${stats.visible}/${stats.submitted} visible · ${stats.drawCalls} draw calls · ${stats.cpuMilliseconds.toFixed(2)} ms CPU`;
+  if (stats) $("#render-stats").textContent = `${stats.visible}/${stats.submitted} visible · ${stats.culled} culled · ${stats.drawCalls} draws · ${stats.cpuMilliseconds.toFixed(2)} ms CPU`;
   renderInspector();
   $("#asset-count").textContent = `${assets.length} ITEMS`;
   $("#asset-list").replaceChildren();
