@@ -29,6 +29,15 @@ std::array<float,16> viewProjection(const Camera& camera){
  std::array<float,16> projection{};projection[0]=t/camera.aspectRatio;projection[5]=t;projection[10]=(camera.farPlane+camera.nearPlane)*nf;projection[11]=-1;projection[14]=2*camera.farPlane*camera.nearPlane*nf;
  return multiply(projection,view);
 }
+std::array<float,16> lightViewProjection(const DirectionalLight& light){
+ const V3 direction=norm({light.direction.x,light.direction.y,light.direction.z});
+ const V3 eye=mul(direction,-18.0F),up=std::abs(direction.y)>0.95F?V3{0,0,1}:V3{0,1,0};
+ const V3 s=norm(cross(direction,up)),u=cross(s,direction);
+ const std::array<float,16> view={s.x,u.x,-direction.x,0,s.y,u.y,-direction.y,0,s.z,u.z,-direction.z,0,-dot(s,eye),-dot(u,eye),dot(direction,eye),1};
+ constexpr float nearPlane=0.1F,farPlane=70.0F;
+ std::array<float,16> projection{};projection[0]=1.0F/18.0F;projection[5]=1.0F/18.0F;projection[10]=-2.0F/(farPlane-nearPlane);projection[14]=-(farPlane+nearPlane)/(farPlane-nearPlane);projection[15]=1.0F;
+ return multiply(projection,view);
+}
 constexpr const char* VERTEX_SHADER=R"(#version 330 core
 layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
