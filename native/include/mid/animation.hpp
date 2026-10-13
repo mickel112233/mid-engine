@@ -24,6 +24,7 @@ struct SkinInfluence { std::array<std::uint32_t,4> joints{}; std::array<float,4>
 struct Vec3Key { float time{0}; Vec3f value{}; };
 struct JointTrack { std::size_t joint{0}; std::vector<Vec3Key> positions; std::vector<Vec3Key> rotations; std::vector<Vec3Key> scales; };
 struct Clip { std::string name; float duration{0}; std::vector<JointTrack> tracks; void validate(const Skeleton& skeleton) const; };
+struct AnimatorDebugSnapshot { bool playing{false}; bool looping{true}; std::string clipName; float time{0}; float duration{0}; Pose worldPose; std::vector<Vec3f> localPositions; std::vector<Vec3f> localRotations; std::vector<Vec3f> localScales; };
 class Animator final {
 public:
     explicit Animator(Skeleton skeleton);
@@ -32,6 +33,8 @@ public:
     void update(float deltaSeconds);
     [[nodiscard]] const Skeleton& skeleton() const noexcept;
     [[nodiscard]] float time() const noexcept;
+    // Captures sampled local channels and hierarchical world pose for editor inspection.
+    [[nodiscard]] AnimatorDebugSnapshot debugSnapshot() const;
 private:
     Skeleton skeleton_;
     std::optional<Clip> clip_;
