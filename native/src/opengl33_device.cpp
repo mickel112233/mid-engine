@@ -36,15 +36,17 @@ layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aColor;
 layout(location=4) in mat4 iModel;
 uniform mat4 uViewProjection;
+uniform mat4 uLightViewProjection;
 uniform mat4 uModel;
 uniform int uInstanced;
-out vec3 vWorldPosition; out vec3 vNormal; out vec2 vUv; out vec4 vColor;
-void main(){mat4 model=uInstanced==1?iModel:uModel;vec4 world=model*vec4(aPosition,1.0);vWorldPosition=world.xyz;vNormal=normalize(mat3(model)*aNormal);vUv=aUv;vColor=aColor;gl_Position=uViewProjection*world;})";
+out vec3 vWorldPosition; out vec3 vNormal; out vec2 vUv; out vec4 vColor; out vec4 vShadowPosition;
+void main(){mat4 model=uInstanced==1?iModel:uModel;vec4 world=model*vec4(aPosition,1.0);vWorldPosition=world.xyz;vShadowPosition=uLightViewProjection*world;vNormal=normalize(mat3(model)*aNormal);vUv=aUv;vColor=aColor;gl_Position=uViewProjection*world;})";
 constexpr const char* FRAGMENT_SHADER=R"(#version 330 core
-in vec3 vWorldPosition; in vec3 vNormal; in vec2 vUv; in vec4 vColor;
+in vec3 vWorldPosition; in vec3 vNormal; in vec2 vUv; in vec4 vColor; in vec4 vShadowPosition;
+uniform sampler2D uShadowMap; uniform int uShadowEnabled;
 uniform vec4 uBaseColor; uniform vec3 uLightDirection; uniform vec3 uCameraPosition; uniform float uMetallic; uniform float uRoughness; uniform int uHasTexture; uniform sampler2D uBaseColorTexture;
 out vec4 outColor;
-void main(){vec4 base=uBaseColor*vColor;if(uHasTexture==1)base*=texture(uBaseColorTexture,vUv);vec3 N=normalize(vNormal),V=normalize(uCameraPosition-vWorldPosition),L=normalize(-uLightDirection),H=normalize(V+L);float nl=max(dot(N,L),0.0),nv=max(dot(N,V),0.001),nh=max(dot(N,H),0.0),vh=max(dot(V,H),0.0);float r=clamp(uRoughness,0.05,1.0),a=r*r,a2=a*a,d=nh*nh*(a2-1.0)+1.0;float D=a2/max(3.14159265*d*d,0.001),k=(r+1.0)*(r+1.0)/8.0,G=(nv/(nv*(1.0-k)+k))*(nl/(nl*(1.0-k)+k));vec3 f0=mix(vec3(0.04),base.rgb,uMetallic),F=f0+(1.0-f0)*pow(1.0-vh,5.0);vec3 spec=D*G*F/max(4.0*nv*max(nl,0.001),0.001),diff=(1.0-F)*(1.0-uMetallic)*base.rgb/3.14159265;vec3 hemi=mix(vec3(0.07,0.06,0.05),vec3(0.25,0.34,0.48),clamp(N.y*0.5+0.5,0.0,1.0));outColor=vec4(base.rgb*hemi*0.35+(diff+spec)*nl,base.a);})";
+void main(){vec4 base=uBaseColor*vColor;if(uHasTexture==1)base*=texture(uBaseColorTexture,vUv);vec3 N=normalize(vNormal),V=normalize(uCameraPosition-vWorldPosition),L=normalize(-uLightDirection),H=normalize(V+L);float nl=max(dot(N,L),0.0),nv=max(dot(N,V),0.001),nh=max(dot(N,H),0.0),vh=max(dot(V,H),0.0);float r=clamp(uRoughness,0.05,1.0),a=r*r,a2=a*a,d=nh*nh*(a2-1.0)+1.0;float D=a2/max(3.14159265*d*d,0.001),k=(r+1.0)*(r+1.0)/8.0,G=(nv/(nv*(1.0-k)+k))*(nl/(nl*(1.0-k)+k));vec3 f0=mix(vec3(0.04),base.rgb,uMetallic),F=f0+(1.0-f0)*pow(1.0-vh,5.0);vec3 spec=D*G*F/max(4.0*nv*max(nl,0.001),0.001),diff=(1.0-F)*(1.0-uMetallic)*base.rgb/3.14159265;float visibility=1.0;if(uShadowEnabled==1&&vShadowPosition.w>0.0){vec3 sc=vShadowPosition.xyz/vShadowPosition.w*0.5+0.5;if(sc.x>0.0&&sc.x<1.0&&sc.y>0.0&&sc.y<1.0&&sc.z>0.0&&sc.z<1.0){float depth=texture(uShadowMap,sc.xy).r;visibility=sc.z-0.0025<=depth?1.0:0.28;}}vec3 hemi=mix(vec3(0.07,0.06,0.05),vec3(0.25,0.34,0.48),clamp(N.y*0.5+0.5,0.0,1.0));outColor=vec4(base.rgb*hemi*0.35+(diff+spec)*nl*visibility,base.a);})";
 constexpr const char* SHADOW_VERTEX_SHADER=R"(#version 330 core
 layout(location=0) in vec3 aPosition;
 uniform mat4 uModel; uniform mat4 uLightViewProjection;
