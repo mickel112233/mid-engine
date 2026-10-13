@@ -29,6 +29,7 @@ public:
     bool removeRenderComponents(EntityId entity);
     [[nodiscard]] RenderSceneSnapshot build(const Scene& scene, const render::Camera& camera,
                                              const render::DirectionalLight& sun) const;
+    [[nodiscard]] std::array<float,16> modelMatrix(const Scene& scene,EntityId entity) const;
 private:
     std::unordered_map<EntityId, RenderComponents> components_;
 };
