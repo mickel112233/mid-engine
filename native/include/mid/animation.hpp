@@ -39,7 +39,11 @@ private:
     bool looping_{true};
 };
 struct IkResult { bool converged{false}; std::size_t iterations{0}; float finalError{0}; };
+struct IkJointConstraint { std::size_t joint{0}; Vec3f minimumRotationDegrees{-180,-180,-180}; Vec3f maximumRotationDegrees{180,180,180}; float maximumStepDegrees{45}; };
 // CCD adjusts joint positions along a chain, leaving the root fixed.
 [[nodiscard]] IkResult solveCcd(Skeleton& skeleton,const std::vector<std::size_t>& chain,
                                 Vec3f target,std::size_t maxIterations=16,float tolerance=0.001F);
+[[nodiscard]] IkResult solveCcdConstrained(Skeleton& skeleton,const std::vector<std::size_t>& chain,Vec3f target,
+                                           const std::vector<IkJointConstraint>& constraints,
+                                           std::size_t maxIterations=16,float tolerance=0.001F);
 } // namespace mid::animation
