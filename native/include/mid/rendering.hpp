@@ -102,6 +102,8 @@ struct RenderStats {
     std::size_t batches{0};
     std::size_t estimatedInstanceCount{0};
     double planningMilliseconds{0.0};
+    double gpuMilliseconds{0.0};
+    bool gpuTimingAvailable{false};
 };
 struct RenderPlan {
     std::vector<DrawBatch> opaqueBatches;
