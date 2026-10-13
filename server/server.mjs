@@ -98,6 +98,13 @@ const OPENAPI = {
     "/api/scene": {
       get: { operationId: "getScene", responses: { "200": { description: "Current scene and assets" } } }
     },
+    "/api/scene/restore": {
+      post: {
+        operationId: "restoreSceneSnapshot",
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["scene"], properties: { scene: { type: "object" } } } } } },
+        responses: { "200": { description: "Validated scene snapshot restored" }, "400": { description: "Invalid scene snapshot" }, "422": { description: "Scene validation failed" } }
+      }
+    },
     "/api/tools": {
       get: { operationId: "listTools", responses: { "200": { description: "Tool manifest and safety metadata" } } }
     },
