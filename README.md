@@ -34,7 +34,7 @@ ctest --test-dir build --build-config Release --output-on-failure
 - Basic 3D cube geometry, perspective camera, grid, mouse orbit, and wheel zoom
 - WebGL preview metallic-roughness Cook-Torrance lighting, hemisphere ambient light, optional directional depth-texture shadows, ANGLE GPU instancing, CPU/GPU timer profiling, per-face normals, and reduced redundant geometry uploads
 - Native renderer planning APIs for mesh/material batching, frustum culling, LOD selection, profiling, and deferred resource destruction
-- Async asset cache with LRU memory budget and explicit load failure/eviction states; Wavefront OBJ/MTL import; BMP texture decoding; optional Assimp glTF/GLB/FBX mesh/material import
+- Async asset cache with LRU memory budget and explicit load failure/eviction states; Wavefront OBJ/MTL import; BMP texture decoding; optional Assimp glTF/GLB/FBX mesh/material/node and position/rotation animation import
 - Native scene-to-renderer bridge, transform gizmo operations with undo/redo and isolated play-mode copy, spatial-hash sphere broadphase with plane/box contacts and spring distance joints, hierarchical quaternion pose evaluation/blending and CPU skinning, CCD IK, atomic bounded command VM, optional sandboxed Lua lifecycle runtime, and CPU GGX PBR reference shading
 - Persistent scene/entity model with transforms and JSON serialization
 - Local HTTP API and OpenAPI contract for AI agents to inspect the project and perform allowlisted scene operations
