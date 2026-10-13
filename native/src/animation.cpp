@@ -40,7 +40,7 @@ struct Quat { float x{0},y{0},z{0},w{1}; };
 Quat qmul(Quat a,Quat b){return {a.w*b.x+a.x*b.w+a.y*b.z-a.z*b.y,a.w*b.y-a.x*b.z+a.y*b.w+a.z*b.x,a.w*b.z+a.x*b.y-a.y*b.x+a.z*b.w,a.w*b.w-a.x*b.x-a.y*b.y-a.z*b.z};}
 Quat qnorm(Quat q){const float n=std::sqrt(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w);return n>1e-7F?Quat{q.x/n,q.y/n,q.z/n,q.w/n}:Quat{};}
 Quat qconj(Quat q){return {-q.x,-q.y,-q.z,q.w};}
-Quat qfromEuler(Vec3f d){constexpr float k=0.00872664625997F;const float x=d.x*k,y=d.y*k,z=d.z*k;const Quat qx{std::sin(x),0,0,std::cos(x)},qy{0,std::sin(y),0,std::cos(y)},qz{0,0,std::sin(z),std::cos(z)};return qnorm(qmul(qmul(qx,qy),qz));}
+Quat qfromEuler(Vec3f d){constexpr float k=0.00872664625997F;const float x=d.x*k,y=d.y*k,z=d.z*k;const Quat qx{std::sin(x),0,0,std::cos(x)},qy{0,std::sin(y),0,std::cos(y)},qz{0,0,std::sin(z),std::cos(z)};return qnorm(qmul(qmul(qz,qy),qx));}
 Vec3f qrotate(Quat q,Vec3f v){const Quat p{v.x,v.y,v.z,0};const Quat r=qmul(qmul(q,p),qconj(q));return {r.x,r.y,r.z};}
 Quat poseQuat(const Vec4f& v){return qnorm({v.x,v.y,v.z,v.w});}
 Vec4f poseVec(Quat q){q=qnorm(q);return {q.x,q.y,q.z,q.w};}
