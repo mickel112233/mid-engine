@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -24,10 +25,10 @@ render::Vec3f normalize(render::Vec3f v){const float n=length(v);return n>1e-8F?
 Key parseKey(const std::string& token,std::size_t pc,std::size_t tc,std::size_t nc){
  const auto first=token.find('/');const auto second=first==std::string::npos?std::string::npos:token.find('/',first+1);
  const auto p=token.substr(0,first);if(p.empty())throw std::invalid_argument("OBJ face vertex is missing position index");
- int pi=0,ti=-1,ni=-1;try{pi=std::stoi(p);}catch(...){throw std::invalid_argument("OBJ position index is invalid");}
+ int pi=0,ti=0,ni=0;try{pi=std::stoi(p);}catch(...){throw std::invalid_argument("OBJ position index is invalid");}
  if(first!=std::string::npos){const auto t=token.substr(first+1,second==std::string::npos?std::string::npos:second-first-1);if(!t.empty()){try{ti=std::stoi(t);}catch(...){throw std::invalid_argument("OBJ texture index is invalid");}}}
  if(second!=std::string::npos){const auto n=token.substr(second+1);if(!n.empty()){try{ni=std::stoi(n);}catch(...){throw std::invalid_argument("OBJ normal index is invalid");}}}
- return {resolveIndex(pi,pc,"position"),ti==-1?-1:resolveIndex(ti,tc,"texture"),ni==-1?-1:resolveIndex(ni,nc,"normal")};
+ return {resolveIndex(pi,pc,"position"),ti==0?-1:resolveIndex(ti,tc,"texture"),ni==0?-1:resolveIndex(ni,nc,"normal")};
 }
 }
 render::MeshData importObj(std::string_view source,std::string name){
@@ -42,8 +43,8 @@ render::MeshData importObj(std::string_view source,std::string name){
    std::vector<std::uint32_t> face;std::string token;
    while(row>>token){if(token.starts_with('#'))break;const Key key=parseKey(token,positions.size(),uvs.size(),normals.size());
     auto found=unique.find(key);if(found==unique.end()){
-      if(mesh.vertices.size()>=static_cast<std::size_t>(UINT32_MAX))throw std::invalid_argument("OBJ has too many unique vertices");
-      render::Vertex v;v.position=positions[static_cast<std::size_t>(key.p)];if(key.t>=0)v.uv=uvs[static_cast<std::size_t>(key.t)];if(key.n>=0)v.normal=normals[static_cast<std::size_t>(key.n)];
+      if(mesh.vertices.size()>=static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()))throw std::invalid_argument("OBJ has too many unique vertices");
+      render::Vertex v;v.position=positions[static_cast<std::size_t>(key.p)];if(key.t>=0)v.uv=uvs[static_cast<std::size_t>(key.t)];if(key.n>=0)v.normal=normals[static_cast<std::size_t>(key.n)];else v.normal={0,0,0};
       const auto id=static_cast<std::uint32_t>(mesh.vertices.size());mesh.vertices.push_back(v);unique.emplace(key,id);face.push_back(id);
     }else face.push_back(found->second);
    }
@@ -54,8 +55,8 @@ render::MeshData importObj(std::string_view source,std::string name){
  if(mesh.vertices.empty()||mesh.indices.empty())throw std::invalid_argument("OBJ contains no renderable faces");
  // Generate face normals for vertices whose source normal was omitted, accumulating shared corners.
  std::vector<render::Vec3f> generated(mesh.vertices.size(),{0,0,0});
- for(std::size_t i=0;i<mesh.indices.size();i+=3){const auto ia=mesh.indices[i],ib=mesh.indices[i+1],ic=mesh.indices[i+2];const auto n=cross(sub(mesh.vertices[ib].position,mesh.vertices[ia].position),sub(mesh.vertices[ic].position,mesh.vertices[ia].position));for(auto id:{ia,ib,ic})if(unique.begin()!=unique.end())generated[id]={generated[id].x+n.x,generated[id].y+n.y,generated[id].z+n.z};}
- for(std::size_t i=0;i<mesh.vertices.size();++i){if(length(mesh.vertices[i].normal)<1e-7F||!std::isfinite(mesh.vertices[i].normal.x))mesh.vertices[i].normal=normalize(generated[i]);}
+ for(std::size_t i=0;i<mesh.indices.size();i+=3){const auto ia=mesh.indices[i],ib=mesh.indices[i+1],ic=mesh.indices[i+2];const auto n=cross(sub(mesh.vertices[ib].position,mesh.vertices[ia].position),sub(mesh.vertices[ic].position,mesh.vertices[ia].position));for(auto id:{ia,ib,ic})if(length(mesh.vertices[id].normal)<1e-7F)generated[id]={generated[id].x+n.x,generated[id].y+n.y,generated[id].z+n.z};}
+ for(std::size_t i=0;i<mesh.vertices.size();++i){if(length(mesh.vertices[i].normal)<1e-7F)mesh.vertices[i].normal=normalize(generated[i]);}
  render::Vec3f center{};for(const auto& v:mesh.vertices){center.x+=v.position.x;center.y+=v.position.y;center.z+=v.position.z;}
  const float count=static_cast<float>(mesh.vertices.size());center={center.x/count,center.y/count,center.z/count};float radius=0;
  for(const auto& v:mesh.vertices)radius=std::max(radius,length(sub(v.position,center)));
