@@ -55,6 +55,18 @@ $("#scene-canvas").addEventListener("mid-engine-pick", (event) => {
   selectedId = event.detail?.entityId || null;
   render();
 });
+$("#viewport-gizmo").querySelectorAll("button[data-axis]").forEach((button) => {
+  button.addEventListener("click", () => nudgeSelectedAxis(button.dataset.axis, Number(button.dataset.delta)));
+});
+function renderTransformGizmo(visibleScene) {
+  const gizmo = $("#viewport-gizmo"), entity = currentEntity();
+  const projected = !isPlaying && entity ? renderer?.project(entity) : null;
+  gizmo.classList.toggle("hidden", !projected);
+  if (!projected) return;
+  gizmo.style.left = projected.x + "px";
+  gizmo.style.top = projected.y + "px";
+  for (const button of gizmo.querySelectorAll("button")) button.disabled = isPlaying;
+}
 function render() {
   if (!scene) return;
   $("#project-name").textContent = scene.name;
@@ -83,6 +95,7 @@ function render() {
     const gpu = Number.isFinite(stats.gpuMilliseconds) ? " · " + stats.gpuMilliseconds.toFixed(2) + " ms GPU" : "";
     $("#render-stats").textContent = stats.visible + "/" + stats.submitted + " visible · " + stats.culled + " culled · " + stats.drawCalls + " draws · " + stats.cpuMilliseconds.toFixed(2) + " ms CPU" + gpu;
   }
+  renderTransformGizmo(visibleScene);
   renderInspector();
   $("#asset-count").textContent = `${assets.length} ITEMS`;
   $("#asset-list").replaceChildren();
