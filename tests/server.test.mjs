@@ -21,6 +21,17 @@ test("local HTTP server exposes health, tools, and OpenAPI contract", async () =
     assert.ok(manifest.tools.some((tool) => tool.name === "add_entity"));
     assert.ok(manifest.tools.some((tool) => tool.name === "delete_entity"));
 
+    const current = await fetch(`${base}/api/scene`);
+    assert.equal(current.status, 200);
+    const snapshot = await current.json();
+    const restored = await fetch(`${base}/api/scene/restore`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scene: snapshot.scene })
+    });
+    assert.equal(restored.status, 200);
+    assert.equal((await restored.json()).ok, true);
+
     const spec = await fetch(`${base}/openapi.json`);
     assert.equal(spec.status, 200);
     assert.equal((await spec.json()).openapi, "3.1.0");
