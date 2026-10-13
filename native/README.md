@@ -82,4 +82,4 @@ while (host.pumpEvents()) {
 }
 ```
 
-Controls: WASD/QE move the camera, F5 toggles isolated play mode, Ctrl+Z/Ctrl+Y undo/redo, and G enables axis-constrained mouse dragging for the selected entity (set it with `setSelectedEntity`; X/Y/Z choose the axis). The current gizmo interaction is functional but deliberately minimal: it does not yet draw an on-screen axis widget or implement viewport ray picking. Native window creation/rendering requires a working desktop display and OpenGL 3.3 driver, so headless CI can compile and test the host but cannot prove a real hardware-rendered frame.
+The native host supports viewport ray picking, mouse camera orbit, resize/DPI-aware pointer mapping, axis-constrained translation, F5 isolated play mode, and Ctrl+Z/Ctrl+Y undo/redo. It still does not draw a fully rendered 3D transform gizmo. Native window creation/rendering requires a working desktop display and OpenGL 3.3 driver, so headless CI can compile and test the host but cannot prove a real hardware-rendered frame.
