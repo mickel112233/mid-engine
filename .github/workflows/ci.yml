@@ -28,7 +28,7 @@ jobs:
       - name: Test native engine
         run: ctest --test-dir build -C Release --output-on-failure
       - name: Package native SDK
-        run: cpack --config build/CPackConfig.cmake -C Release -B build/packages
+        run: cpack --config build/CPackConfig.cmake -G ZIP -C Release -B build/packages
       - name: Upload native SDK package
         uses: actions/upload-artifact@v4
         with:
