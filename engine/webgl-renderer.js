@@ -189,6 +189,8 @@ export function createWebGLRenderer(canvas) {
     instanceTint:gl.getAttribLocation(program,"aInstanceTint")
   };
   const instancing=gl.getExtension("ANGLE_instanced_arrays");
+  const timerQuery=gl.getExtension("EXT_disjoint_timer_query");
+  let pendingGpuQuery=null,lastGpuMilliseconds=null;
   const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer(),instanceBuffer=gl.createBuffer();
   const gridVertices=createGridVertices();
   uploadGeometry(gl,gridBuffer,gridVertices);
@@ -210,6 +212,13 @@ export function createWebGLRenderer(canvas) {
   }
   function render(scene,selectedId=null) {
     const startedAt=performance.now();
+    if(timerQuery&&pendingGpuQuery&&timerQuery.getQueryObjectEXT(pendingGpuQuery,timerQuery.QUERY_RESULT_AVAILABLE_EXT)){
+      const disjoint=gl.getParameter(timerQuery.GPU_DISJOINT_EXT);
+      if(!disjoint)lastGpuMilliseconds=timerQuery.getQueryObjectEXT(pendingGpuQuery,timerQuery.QUERY_RESULT_EXT)/1e6;
+      timerQuery.deleteQueryEXT(pendingGpuQuery);pendingGpuQuery=null;
+    }
+    const canTimeGpu=Boolean(timerQuery&&!pendingGpuQuery);
+    if(canTimeGpu){pendingGpuQuery=timerQuery.createQueryEXT();timerQuery.beginQueryEXT(timerQuery.TIME_ELAPSED_EXT,pendingGpuQuery);}
     resize();
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
@@ -289,10 +298,11 @@ export function createWebGLRenderer(canvas) {
         drawCalls++;
       }
     }
-    return { submitted:(scene?.entities||[]).length, visible:visibleObjects, culled:culledObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt };
+    if(canTimeGpu&&pendingGpuQuery)timerQuery.endQueryEXT(timerQuery.TIME_ELAPSED_EXT);
+    return { submitted:(scene?.entities||[]).length, visible:visibleObjects, culled:culledObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt, gpuMilliseconds:lastGpuMilliseconds };
   }
   window.addEventListener("resize",()=>{ if(lastScene) render(lastScene,lastSelectedId); });
   let destroyed=false;
-  function destroy(){if(destroyed)return;destroyed=true;gl.deleteBuffer(cubeBuffer);gl.deleteBuffer(gridBuffer);gl.deleteBuffer(instanceBuffer);gl.deleteProgram(program);}
+  function destroy(){if(destroyed)return;destroyed=true;if(timerQuery&&pendingGpuQuery){timerQuery.deleteQueryEXT(pendingGpuQuery);pendingGpuQuery=null;}gl.deleteBuffer(cubeBuffer);gl.deleteBuffer(gridBuffer);gl.deleteBuffer(instanceBuffer);gl.deleteProgram(program);}
   return { render, destroy };
 }
