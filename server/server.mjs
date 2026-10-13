@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, extname, join, normalize } from "node:path";
+import { dirname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createScene, validateScene } from "../engine/scene.js";
 import { executeTool, interpretCommand, TOOL_DEFINITIONS } from "./agent-tools.mjs";
@@ -15,7 +15,8 @@ const STATIC_FILES = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
-  ["/app.js", ["app.js", "text/javascript; charset=utf-8"]]
+  ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
+  ["/openapi.json", ["openapi.json", "application/json; charset=utf-8"]]
 ]);
 
 mkdirSync(PROJECT_DIR, { recursive: true });
@@ -81,12 +82,32 @@ function serveStatic(pathname, response) {
   return true;
 }
 
+const OPENAPI = {
+  openapi: "3.1.0",
+  info: { title: "Mid Engine Local Agent API", version: "0.1.0", description: "Local-first scene editor and agent tool API. Mutations are schema-validated; deletion requires explicit confirmation." },
+  servers: [{ url: "http://127.0.0.1:4173" }],
+  paths: {
+    "/api/health": { get: { operationId: "health", responses: { "200": { description: "Engine readiness" } } } },
+    "/api/scene": { get: { operationId: "getScene", responses: { "200": { description: "Current scene and assets" } } } },
+    "/api/tools": { get: { operationId: "listTools", responses: { "200": { description: "Tool manifest and safety metadata" } } } },
+    "/api/events": { get: { operationId: "getEvents", responses: { "200": { description: "Recent engine events" } } } },
+    "/api/tools/execute": { post: { operationId: "executeTool", requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["name"], properties: { name: { type: "string" }, args: { type: "object" } } } } } }, responses: { "200": { description: "Structured tool result" }, "403": { description: "Approval required or origin rejected" }, "422": { description: "Invalid operation" } } } },
+    "/api/agent/command": { post: { operationId: "interpretCommand", requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["command"], properties: { command: { type: "string" } } } } } }, responses: { "200": { description: "Command result" }, "400": { description: "Unsupported command" } } },
+    "/api/save": { post: { operationId: "saveScene", responses: { "200": { description: "Persisted scene" } } } }
+  }
+};
+
 export function createMidEngineServer() {
   return createServer(async (request, response) => {
     const origin = request.headers.origin;
     if (origin) {
       const host = request.headers.host || "";
-      if (!origin.startsWith(`http://${host}`) && !origin.startsWith(`https://${host}`)) {
+      let parsedOrigin;
+      try { parsedOrigin = new URL(origin); } catch {
+        send(response, 403, { error: "origin_not_allowed", message: "Invalid Origin header." });
+        return;
+      }
+      if (parsedOrigin.host !== host || !["http:", "https:"].includes(parsedOrigin.protocol)) {
         send(response, 403, { error: "origin_not_allowed", message: "Cross-origin requests are not allowed." });
         return;
       }
@@ -94,6 +115,7 @@ export function createMidEngineServer() {
     const url = new URL(request.url || "/", `http://${request.headers.host || "127.0.0.1"}`);
     try {
       if (request.method === "GET" && url.pathname === "/api/health") return send(response, 200, { ok: true, name: "Mid Engine", version: "0.1.0", host: HOST });
+      if (request.method === "GET" && url.pathname === "/api/openapi.json") return send(response, 200, OPENAPI);
       if (request.method === "GET" && url.pathname === "/api/scene") return send(response, 200, { scene, assets });
       if (request.method === "GET" && url.pathname === "/api/tools") return send(response, 200, { tools: TOOL_DEFINITIONS, safety: { loopbackOnly: HOST === "127.0.0.1" || HOST === "localhost", destructiveOperationsRequireExplicitConfirmation: true } });
       if (request.method === "GET" && url.pathname === "/api/events") return send(response, 200, { events: context.getEvents(Number(url.searchParams.get("limit")) || 50) });
