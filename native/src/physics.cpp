@@ -31,7 +31,7 @@ void PhysicsWorld::addBody(RigidBody bodyValue) {
 bool PhysicsWorld::removeBody(std::uint64_t id) {
     const auto it=std::find_if(bodies_.begin(),bodies_.end(),[&](const auto& b){return b.entityId==id;});
     if(it==bodies_.end())return false;
-    bodies_.erase(it);return true;
+    bodies_.erase(it);\n    std::erase_if(joints_,[&](const DistanceJoint& joint){return joint.a==id||joint.b==id;});\n    std::erase_if(ropes_,[&](const RopeJoint& joint){return joint.a==id||joint.b==id;});\n    return true;
 }
 RigidBody* PhysicsWorld::body(std::uint64_t id) noexcept {for(auto& b:bodies_)if(b.entityId==id)return &b;return nullptr;}
 const RigidBody* PhysicsWorld::body(std::uint64_t id) const noexcept {for(const auto& b:bodies_)if(b.entityId==id)return &b;return nullptr;}
@@ -137,7 +137,8 @@ void PhysicsWorld::step() {
         pairs.insert((static_cast<std::uint64_t>(i)<<32U)|static_cast<std::uint64_t>(j));
     }}
     stats_.broadphaseCandidates=pairs.size();
-    for(const auto pair:pairs) {
+    std::vector<std::uint64_t> sortedPairs(pairs.begin(),pairs.end());std::sort(sortedPairs.begin(),sortedPairs.end());
+    for(const auto pair:sortedPairs) {
         const auto i=static_cast<std::size_t>(pair>>32U),j=static_cast<std::size_t>(pair&0xffffffffULL);
         if(i>=bodies_.size()||j>=bodies_.size())continue;
         auto& a=bodies_[i];auto& b=bodies_[j];
