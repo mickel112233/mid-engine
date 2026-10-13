@@ -31,10 +31,10 @@ PhysicsWorld::PhysicsWorld(Vec3f gravity,float fixedStep):gravity_(gravity),fixe
 }
 void PhysicsWorld::addBody(RigidBody bodyValue) {
     if(bodyValue.entityId==0||body(bodyValue.entityId)!=nullptr) throw std::invalid_argument("Rigid body entity ID must be unique and non-zero");
-    if(!finite(bodyValue.position)||!finite(bodyValue.velocity)||!finite(bodyValue.force)||!std::isfinite(bodyValue.inverseMass)||
-       !std::isfinite(bodyValue.restitution)||!std::isfinite(bodyValue.linearDamping)||!std::isfinite(bodyValue.radius)||
+    if(!finite(bodyValue.position)||!finite(bodyValue.velocity)||!finite(bodyValue.force)||!finite(bodyValue.rotationDegrees)||!finite(bodyValue.angularVelocity)||!finite(bodyValue.torque)||!std::isfinite(bodyValue.inverseMass)||
+       !std::isfinite(bodyValue.restitution)||!std::isfinite(bodyValue.linearDamping)||!std::isfinite(bodyValue.angularDamping)||!std::isfinite(bodyValue.radius)||
        bodyValue.inverseMass<0.0F||bodyValue.restitution<0.0F||bodyValue.restitution>1.0F||
-       bodyValue.linearDamping<0.0F||bodyValue.radius<=0.0F) throw std::invalid_argument("Rigid body values are invalid");
+       bodyValue.linearDamping<0.0F||bodyValue.angularDamping<0.0F||bodyValue.radius<=0.0F) throw std::invalid_argument("Rigid body values are invalid");
     bodies_.push_back(bodyValue);
 }
 bool PhysicsWorld::removeBody(std::uint64_t id) {
@@ -89,6 +89,11 @@ void PhysicsWorld::applyForce(std::uint64_t id,Vec3f force) {
     if(!finite(force))throw std::invalid_argument("Force must be finite");
     b->force=add(b->force,force);b->sleeping=false;
 }
+void PhysicsWorld::applyTorque(std::uint64_t id,Vec3f torque) {
+    if(!finite(torque))throw std::invalid_argument("Torque must be finite");
+    auto* target=body(id);if(!target)throw std::out_of_range("Rigid body does not exist");
+    if(!target->kinematic&&target->inverseMass>0.0F)target->torque=add(target->torque,torque);
+}
 std::size_t PhysicsWorld::advance(float elapsed,std::size_t maxSubsteps) {
     if(!std::isfinite(elapsed)||elapsed<0.0F)throw std::invalid_argument("Elapsed time must be finite and non-negative");
     if(maxSubsteps==0)return 0;
@@ -131,7 +136,12 @@ void PhysicsWorld::step() {
         b.velocity=add(b.velocity,mul(acceleration,fixedStep_));
         b.velocity=mul(b.velocity,std::max(0.0F,1.0F-b.linearDamping*fixedStep_));
         b.position=add(b.position,mul(b.velocity,fixedStep_));
-        b.force={};
+        const float inverseInertia=b.inverseMass/(0.4F*b.radius*b.radius);
+        b.angularVelocity=add(b.angularVelocity,mul(b.torque,inverseInertia*fixedStep_));
+        b.angularVelocity=mul(b.angularVelocity,std::max(0.0F,1.0F-b.angularDamping*fixedStep_));
+        constexpr float radiansToDegrees=57.2957795131F;
+        b.rotationDegrees=add(b.rotationDegrees,mul(b.angularVelocity,fixedStep_*radiansToDegrees));
+        b.force={};b.torque={};
     }
     std::unordered_map<Cell,std::vector<std::size_t>,CellHash> grid;
     constexpr float cellSize=2.0F;
