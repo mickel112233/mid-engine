@@ -2,7 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 int main(){
- int failures=0;auto check=[&](bool ok,const char* msg){if(!ok){std::cerr<<"FAIL: "<<msg<<'\\n';++failures;}};
+ int failures=0;auto check=[&](bool ok,const char* msg){if(!ok){std::cerr<<"FAIL: "<<msg<<'\n';++failures;}};
  if(!mid::script::LuaScriptInstance::available()){
   bool rejected=false;try{mid::script::LuaScriptInstance script("function start() end");}catch(const std::runtime_error&){rejected=true;}
   check(rejected,"missing optional Lua dependency fails with a clear error");
