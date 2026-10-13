@@ -1,5 +1,6 @@
 #include "mid/editor_bridge.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <unordered_set>
