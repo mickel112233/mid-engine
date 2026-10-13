@@ -26,14 +26,14 @@ Vec3f sample(const std::vector<Vec3Key>& keys,float t){
 }
 void Skeleton::validate() const {
     for(std::size_t i=0;i<joints.size();++i){const auto& j=joints[i];if(j.parent>=static_cast<std::int32_t>(joints.size())||j.parent==static_cast<std::int32_t>(i)||j.parent< -1)throw std::invalid_argument("Skeleton joint parent index is invalid");
-        if(!std::isfinite(j.bindPosition.x)||!std::isfinite(j.bindPosition.y)||!std::isfinite(j.bindPosition.z)||!std::isfinite(j.bindRotationDegrees.x)||!std::isfinite(j.bindRotationDegrees.y)||!std::isfinite(j.bindRotationDegrees.z)||!std::isfinite(j.position.x)||!std::isfinite(j.position.y)||!std::isfinite(j.position.z)||!std::isfinite(j.rotationDegrees.x)||!std::isfinite(j.rotationDegrees.y)||!std::isfinite(j.rotationDegrees.z))throw std::invalid_argument("Skeleton bind/current pose must be finite");
+        if(!std::isfinite(j.bindPosition.x)||!std::isfinite(j.bindPosition.y)||!std::isfinite(j.bindPosition.z)||!std::isfinite(j.bindRotationDegrees.x)||!std::isfinite(j.bindRotationDegrees.y)||!std::isfinite(j.bindRotationDegrees.z)||!std::isfinite(j.position.x)||!std::isfinite(j.position.y)||!std::isfinite(j.position.z)||!std::isfinite(j.rotationDegrees.x)||!std::isfinite(j.rotationDegrees.y)||!std::isfinite(j.rotationDegrees.z)||!std::isfinite(j.bindScale.x)||!std::isfinite(j.bindScale.y)||!std::isfinite(j.bindScale.z)||!std::isfinite(j.scale.x)||!std::isfinite(j.scale.y)||!std::isfinite(j.scale.z))throw std::invalid_argument("Skeleton bind/current pose must be finite");
         std::int32_t p=j.parent;std::size_t hops=0;while(p>=0){if(++hops>joints.size())throw std::invalid_argument("Skeleton hierarchy contains a cycle");p=joints[static_cast<std::size_t>(p)].parent;}
     }
 }
 void Clip::validate(const Skeleton& skeleton) const {
     if(!std::isfinite(duration)||duration<0)throw std::invalid_argument("Animation duration is invalid");
     for(const auto& track:tracks){if(track.joint>=skeleton.joints.size())throw std::invalid_argument("Animation track joint is out of range");float previous=-1;
-        for(const auto& key:track.positions){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation keyframe is invalid or unsorted");previous=key.time;} previous=-1; for(const auto& key:track.rotations){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation rotation keyframe is invalid or unsorted");previous=key.time;}}
+        for(const auto& key:track.positions){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation keyframe is invalid or unsorted");previous=key.time;} previous=-1; for(const auto& key:track.rotations){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation rotation keyframe is invalid or unsorted");previous=key.time;} previous=-1; for(const auto& key:track.scales){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation scale keyframe is invalid or unsorted");previous=key.time;}}
 }
 namespace {
 struct Quat { float x{0},y{0},z{0},w{1}; };
@@ -53,8 +53,8 @@ Pose evaluateWorldPose(const Skeleton& skeleton,bool bindPose){
   if(state[i]==2) return;
   if(state[i]==1) throw std::logic_error("Skeleton hierarchy cycle");
   state[i]=1;const auto& j=skeleton.joints[i];const Vec3f localPosition=bindPose?j.bindPosition:j.position;const Vec3f localRotation=bindPose?j.bindRotationDegrees:j.rotationDegrees;const Quat localQ=qfromEuler(localRotation);
-  if(j.parent>=0){const auto p=static_cast<std::size_t>(j.parent);self(self,p);const auto& parent=out.joints[p];const Quat parentQ=poseQuat(parent.rotationQuaternion);out.joints[i].position=add(parent.position,qrotate(parentQ,localPosition));out.joints[i].rotationQuaternion=poseVec(qmul(parentQ,localQ));}
-  else {out.joints[i].position=localPosition;out.joints[i].rotationQuaternion=poseVec(localQ);}
+  if(j.parent>=0){const auto p=static_cast<std::size_t>(j.parent);self(self,p);const auto& parent=out.joints[p];const Quat parentQ=poseQuat(parent.rotationQuaternion);out.joints[i].position=add(parent.position,qrotate(parentQ,localPosition));out.joints[i].rotationQuaternion=poseVec(qmul(parentQ,localQ));const auto ps=out.joints[p].scale;const auto ls=bindPose?j.bindScale:j.scale;out.joints[i].scale={ps.x*ls.x,ps.y*ls.y,ps.z*ls.z};}
+  else {out.joints[i].position=localPosition;out.joints[i].rotationQuaternion=poseVec(localQ);out.joints[i].scale=bindPose?j.bindScale:j.scale;}
   state[i]=2;
  };
  for(std::size_t i=0;i<skeleton.joints.size();++i) visit(visit,i);
@@ -62,7 +62,7 @@ Pose evaluateWorldPose(const Skeleton& skeleton,bool bindPose){
 }
 Pose blendPoses(const Pose& a,const Pose& b,float alpha){
  if(a.joints.size()!=b.joints.size()||!std::isfinite(alpha)||alpha<0||alpha>1)throw std::invalid_argument("Pose blend inputs are incompatible");
- Pose out;out.joints.resize(a.joints.size());for(std::size_t i=0;i<out.joints.size();++i){const auto& x=a.joints[i];const auto& y=b.joints[i];out.joints[i].position=add(x.position,mul(sub(y.position,x.position),alpha));out.joints[i].rotationQuaternion=poseVec(qslerp(poseQuat(x.rotationQuaternion),poseQuat(y.rotationQuaternion),alpha));}return out;
+ Pose out;out.joints.resize(a.joints.size());for(std::size_t i=0;i<out.joints.size();++i){const auto& x=a.joints[i];const auto& y=b.joints[i];out.joints[i].position=add(x.position,mul(sub(y.position,x.position),alpha));out.joints[i].rotationQuaternion=poseVec(qslerp(poseQuat(x.rotationQuaternion),poseQuat(y.rotationQuaternion),alpha));out.joints[i].scale=add(x.scale,mul(sub(y.scale,x.scale),alpha));}return out;
 }
 std::vector<Vertex> skinMesh(const Skeleton& skeleton,const std::vector<Vertex>& bindVertices,const std::vector<SkinInfluence>& influences){
  if(bindVertices.size()!=influences.size())throw std::invalid_argument("Every skinned vertex must have one influence record");
@@ -72,16 +72,16 @@ std::vector<Vertex> skinMesh(const Skeleton& skeleton,const std::vector<Vertex>&
  }
  return out;
 }
-Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}}
+Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
 void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;}
-void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}}
+void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
 void Animator::update(float delta){
     if(!std::isfinite(delta)||delta<0)throw std::invalid_argument("Animation delta must be finite and non-negative");
     if(!clip_) return;
     time_+=delta;
     if(clip_->duration>0){if(looping_)time_=std::fmod(time_,clip_->duration);else time_=std::min(time_,clip_->duration);}
-    for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}
-    for(const auto& track:clip_->tracks){if(!track.positions.empty())skeleton_.joints[track.joint].position=sample(track.positions,time_);if(!track.rotations.empty())skeleton_.joints[track.joint].rotationDegrees=sample(track.rotations,time_);}
+    for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}
+    for(const auto& track:clip_->tracks){if(!track.positions.empty())skeleton_.joints[track.joint].position=sample(track.positions,time_);if(!track.rotations.empty())skeleton_.joints[track.joint].rotationDegrees=sample(track.rotations,time_);if(!track.scales.empty())skeleton_.joints[track.joint].scale=sample(track.scales,time_);}
 }
 const Skeleton& Animator::skeleton()const noexcept{return skeleton_;}
 float Animator::time()const noexcept{return time_;}
