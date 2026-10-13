@@ -66,10 +66,11 @@ LuaScriptInstance::LuaScriptInstance(std::string source,LuaConfig config):impl_(
  impl_->state=lua_newstate(&Impl::allocate,&impl_->memory);if(!impl_->state)throw std::runtime_error("Unable to allocate bounded Lua state");
  lua_pushlightuserdata(impl_->state,impl_.get());lua_setfield(impl_->state,LUA_REGISTRYINDEX,"mid.engine.instance");
  luaL_openlibs(impl_->state);
- for(const char* name:{"io","os","package","debug","dofile","loadfile","load","collectgarbage","require"})impl_->removeGlobal(name);
+ for(const char* name:{"io","os","package","debug","coroutine","dofile","loadfile","load","collectgarbage","require"})impl_->removeGlobal(name);
  lua_pushlightuserdata(impl_->state,impl_.get());lua_pushcclosure(impl_->state,&Impl::setPosition,1);lua_setglobal(impl_->state,"set_position");
  lua_pushlightuserdata(impl_->state,impl_.get());lua_pushcclosure(impl_->state,&Impl::setActive,1);lua_setglobal(impl_->state,"set_active");
  lua_pushlightuserdata(impl_->state,impl_.get());lua_pushcclosure(impl_->state,&Impl::log,1);lua_setglobal(impl_->state,"log");
+ lua_pushlightuserdata(impl_->state,impl_.get());lua_pushcclosure(impl_->state,&Impl::log,1);lua_setglobal(impl_->state,"print");
  lua_sethook(impl_->state,&Impl::hook,LUA_MASKCOUNT|LUA_MASKLINE,1000);
  if(luaL_loadbuffer(impl_->state,source.data(),source.size(),"@mid-script")!=LUA_OK||lua_pcall(impl_->state,0,0,0)!=LUA_OK){std::string error=lua_tostring(impl_->state,-1)?lua_tostring(impl_->state,-1):"Lua compile/runtime error";lua_close(impl_->state);impl_->state=nullptr;throw std::runtime_error("Lua script load failed: "+error);}
  lua_sethook(impl_->state,nullptr,0,0);
