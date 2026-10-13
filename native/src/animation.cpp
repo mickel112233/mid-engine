@@ -86,24 +86,59 @@ void Animator::update(float delta){
 const Skeleton& Animator::skeleton()const noexcept{return skeleton_;}
 float Animator::time()const noexcept{return time_;}
 IkResult solveCcd(Skeleton& skeleton,const std::vector<std::size_t>& chain,Vec3f target,std::size_t maxIterations,float tolerance){
-    skeleton.validate();if(chain.size()<2)throw std::invalid_argument("IK chain requires at least two joints");
+    return solveCcdConstrained(skeleton,chain,target,{},maxIterations,tolerance);
+}
+IkResult solveCcdConstrained(Skeleton& skeleton,const std::vector<std::size_t>& chain,Vec3f target,
+                             const std::vector<IkJointConstraint>& constraints,std::size_t maxIterations,float tolerance){
+    skeleton.validate();
+    if(chain.size()<2)throw std::invalid_argument("IK chain requires at least two joints");
     if(!std::isfinite(target.x)||!std::isfinite(target.y)||!std::isfinite(target.z)||!std::isfinite(tolerance)||tolerance<0)throw std::invalid_argument("IK target/tolerance is invalid");
     for(auto id:chain)if(id>=skeleton.joints.size())throw std::out_of_range("IK chain joint index is invalid");
     for(std::size_t i=1;i<chain.size();++i)if(skeleton.joints[chain[i]].parent!=static_cast<std::int32_t>(chain[i-1]))throw std::invalid_argument("IK chain must follow direct parent links");
-    auto& end=skeleton.joints[chain.back()].position;
-    float error=length(sub(target,end));std::size_t iteration=0;
+    std::vector<const IkJointConstraint*> byJoint(skeleton.joints.size(),nullptr);
+    for(const auto& limit:constraints){
+        if(limit.joint>=skeleton.joints.size())throw std::out_of_range("IK constraint joint index is invalid");
+        const auto finite3=[](Vec3f v){return std::isfinite(v.x)&&std::isfinite(v.y)&&std::isfinite(v.z);};
+        if(!finite3(limit.minimumRotationDegrees)||!finite3(limit.maximumRotationDegrees)||!std::isfinite(limit.maximumStepDegrees)||limit.maximumStepDegrees<=0.0F||limit.maximumStepDegrees>180.0F||
+           limit.minimumRotationDegrees.x>limit.maximumRotationDegrees.x||limit.minimumRotationDegrees.y>limit.maximumRotationDegrees.y||limit.minimumRotationDegrees.z>limit.maximumRotationDegrees.z)
+            throw std::invalid_argument("IK rotation limits are invalid");
+        if(byJoint[limit.joint])throw std::invalid_argument("Duplicate IK constraint for one joint");
+        byJoint[limit.joint]=&limit;
+    }
+    auto& endPosition=skeleton.joints[chain.back()].position;
+    float error=length(sub(target,endPosition));std::size_t iteration=0;
+    constexpr float radiansToDegrees=57.2957795131F,degreesToRadians=0.0174532925199F;
     for(;iteration<maxIterations&&error>tolerance;++iteration){
         for(std::size_t index=chain.size()-1;index-->1;){
-            auto& pivot=skeleton.joints[chain[index]].position;
-            Vec3f toEnd=sub(end,pivot),toTarget=sub(target,pivot);
+            auto& joint=skeleton.joints[chain[index]];
+            const Vec3f pivot=joint.position;
+            const Vec3f toEnd=sub(endPosition,pivot),toTarget=sub(target,pivot);
             const float a=length(toEnd),b=length(toTarget);if(a<1e-7F||b<1e-7F)continue;
             const Vec3f axis=normalize(Vec3f{toEnd.y*toTarget.z-toEnd.z*toTarget.y,toEnd.z*toTarget.x-toEnd.x*toTarget.z,toEnd.x*toTarget.y-toEnd.y*toTarget.x});
             const float cosine=std::clamp(dot(toEnd,toTarget)/(a*b),-1.0F,1.0F);
             const float angle=std::acos(cosine);if(length(axis)<1e-7F||angle<1e-6F)continue;
-            for(std::size_t child=index+1;child<chain.size();++child){auto& p=skeleton.joints[chain[child]].position;p=add(pivot,rotateAround(sub(p,pivot),axis,angle));}
+            float appliedAngle=angle;
+            if(const auto* limit=byJoint[chain[index]]){
+                const float fullDegrees=angle*radiansToDegrees,stepDegrees=std::min(fullDegrees,limit->maximumStepDegrees);
+                const Vec3f requested{axis.x*stepDegrees,axis.y*stepDegrees,axis.z*stepDegrees};
+                const Vec3f old=joint.rotationDegrees;
+                Vec3f next{std::clamp(old.x+requested.x,limit->minimumRotationDegrees.x,limit->maximumRotationDegrees.x),
+                           std::clamp(old.y+requested.y,limit->minimumRotationDegrees.y,limit->maximumRotationDegrees.y),
+                           std::clamp(old.z+requested.z,limit->minimumRotationDegrees.z,limit->maximumRotationDegrees.z)};
+                const Vec3f actual=sub(next,old);const float denom=dot(requested,requested);
+                const float ratio=denom>1e-8F?std::clamp(dot(actual,requested)/denom,0.0F,1.0F):0.0F;
+                appliedAngle=angle*(stepDegrees/std::max(fullDegrees,1e-6F))*ratio;
+                joint.rotationDegrees=next;
+            }else{
+                const float stepDegrees=angle*radiansToDegrees;
+                joint.rotationDegrees=add(joint.rotationDegrees,{axis.x*stepDegrees,axis.y*stepDegrees,axis.z*stepDegrees});
+            }
+            if(appliedAngle<1e-7F)continue;
+            for(std::size_t child=index+1;child<chain.size();++child){auto& p=skeleton.joints[chain[child]].position;p=add(pivot,rotateAround(sub(p,pivot),axis,appliedAngle));}
         }
-        error=length(sub(target,end));
+        error=length(sub(target,endPosition));
     }
+    (void)degreesToRadians;
     return {error<=tolerance,iteration,error};
 }
 } // namespace mid::animation
