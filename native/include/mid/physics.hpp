@@ -21,6 +21,7 @@ struct RigidBody {
     bool kinematic{false};
     bool sleeping{false};
 };
+struct PhysicsStats { std::size_t bodies{0}; std::size_t broadphaseCandidates{0}; std::size_t narrowphaseTests{0}; std::size_t contacts{0}; std::size_t fixedSteps{0}; };
 struct Contact { std::uint64_t a{0}; std::uint64_t b{0}; Vec3f normal{}; float penetration{0.0F}; };
 
 class PhysicsWorld final {
@@ -36,6 +37,7 @@ public:
     [[nodiscard]] const std::vector<Contact>& contacts() const noexcept;
     [[nodiscard]] float interpolationAlpha() const noexcept;
     [[nodiscard]] std::size_t bodyCount() const noexcept;
+    [[nodiscard]] const PhysicsStats& stats() const noexcept;
 private:
     void step();
     Vec3f gravity_;
