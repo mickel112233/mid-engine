@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,7 @@ public:
     [[nodiscard]] float time() const noexcept;
 private:
     Skeleton skeleton_;
-    const Clip* clip_{nullptr};
+    std::optional<Clip> clip_;
     float time_{0};
     bool looping_{true};
 };
