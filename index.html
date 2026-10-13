@@ -27,9 +27,8 @@
         <div class="toolbar"><div class="tab active">◈ Scene View</div><div class="tab">▧ Game Preview</div><div class="toolbar-spacer"></div><span class="tiny-label">EDITOR MODE</span><span class="pill">SCENE</span></div>
         <div class="viewport-wrap">
           <div class="viewport-grid"></div>
-          <div class="viewport-top"><span class="viewport-label"><span class="status-dot"></span> EDITOR VIEWPORT</span><span class="viewport-coords">PERSPECTIVE · GRID 1M</span></div>
-          <div class="axis axis-x">X</div><div class="axis axis-y">Y</div>
-          <div class="scene-preview" id="scene-preview" aria-label="Scene preview"></div>
+          <div class="viewport-top"><span class="viewport-label"><span class="status-dot"></span> EDITOR VIEWPORT</span><span class="viewport-coords">DRAG TO ORBIT · WHEEL TO ZOOM</span></div>
+          <canvas id="scene-canvas" class="scene-canvas" aria-label="Interactive 3D scene viewport"></canvas>
           <div class="viewport-empty" id="viewport-empty"><div class="empty-cube">◇</div><strong>Your world starts here.</strong><span>Add an entity to begin building your scene.</span><button class="button primary" id="empty-add">＋ Add first entity</button></div>
           <div class="viewport-bottom"><span id="scene-summary">0 entities</span><span>LOCAL SCENE DATA · AUTOSAVE READY</span></div>
         </div>
