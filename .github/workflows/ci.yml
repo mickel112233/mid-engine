@@ -20,7 +20,7 @@ jobs:
       - run: npm run check
       - name: Install optional native dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libassimp-dev liblua5.4-dev libpng-dev
+        run: sudo apt-get update && sudo apt-get install -y libassimp-dev liblua5.4-dev libpng-dev libjpeg-dev
       - name: Configure native C++20 engine
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build native engine
