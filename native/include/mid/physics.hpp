@@ -19,9 +19,13 @@ struct RigidBody {
     Vec3f position{};
     Vec3f velocity{};
     Vec3f force{};
+    Vec3f rotationDegrees{};
+    Vec3f angularVelocity{};
+    Vec3f torque{};
     float inverseMass{1.0F};
     float restitution{0.0F};
     float linearDamping{0.02F};
+    float angularDamping{0.05F};
     float radius{0.5F};
     bool kinematic{false};
     bool sleeping{false};
@@ -47,6 +51,8 @@ public:
     void addRopeJoint(RopeJoint joint);
     void clearRopeJoints() noexcept;
     void applyForce(std::uint64_t entityId,Vec3f force);
+    // Applies a world-space torque; angular inertia is approximated as a solid sphere.
+    void applyTorque(std::uint64_t entityId,Vec3f torque);
     // Accumulates elapsed time, simulates fixed steps, and caps catch-up work.
     std::size_t advance(float elapsedSeconds,std::size_t maxSubsteps=8);
     [[nodiscard]] const std::vector<Contact>& contacts() const noexcept;
