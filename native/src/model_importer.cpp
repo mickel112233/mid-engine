@@ -117,4 +117,16 @@ ImportedModel importModelFile(const std::filesystem::path& path) {
  return out;
 #endif
 }
+ImageRgba8 decodeImportedTexture(const ImportedTexture& texture) {
+ if(texture.bytes.empty())throw std::invalid_argument("Imported texture payload is empty");
+ if(!texture.compressed) {
+  const std::uint64_t pixels=static_cast<std::uint64_t>(texture.width)*texture.height;
+  if(texture.width==0||texture.height==0||pixels>static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()/4U)||
+     texture.bytes.size()!=static_cast<std::size_t>(pixels)*4U)
+   throw std::invalid_argument("Uncompressed imported texture dimensions do not match its RGBA8 payload");
+  return {texture.width,texture.height,texture.bytes};
+ }
+ std::vector<std::byte> encoded;encoded.reserve(texture.bytes.size());
+ for(const auto byte:texture.bytes)encoded.push_back(static_cast<std::byte>(byte));
+ return decodeImage(encoded);
 }
