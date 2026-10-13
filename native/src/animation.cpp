@@ -44,6 +44,13 @@ Quat qfromEuler(Vec3f d){constexpr float k=0.00872664625997F;const float x=d.x*k
 Vec3f qrotate(Quat q,Vec3f v){const Quat p{v.x,v.y,v.z,0};const Quat r=qmul(qmul(q,p),qconj(q));return {r.x,r.y,r.z};}
 Quat poseQuat(const Vec4f& v){return qnorm({v.x,v.y,v.z,v.w});}
 Vec4f poseVec(Quat q){q=qnorm(q);return {q.x,q.y,q.z,q.w};}
+Vec3f qtoEuler(Quat q){
+ q=qnorm(q);constexpr float toDegrees=57.2957795131F;
+ const float sinr=2.0F*(q.w*q.x+q.y*q.z),cosr=1.0F-2.0F*(q.x*q.x+q.y*q.y);
+ const float sinp=2.0F*(q.w*q.y-q.z*q.x);
+ const float siny=2.0F*(q.w*q.z+q.x*q.y),cosy=1.0F-2.0F*(q.y*q.y+q.z*q.z);
+ return {std::atan2(sinr,cosr)*toDegrees,std::asin(std::clamp(sinp,-1.0F,1.0F))*toDegrees,std::atan2(siny,cosy)*toDegrees};
+}
 Quat qslerp(Quat a,Quat b,float t){float d=a.x*b.x+a.y*b.y+a.z*b.z+a.w*b.w;if(d<0){b={-b.x,-b.y,-b.z,-b.w};d=-d;}if(d>.9995F)return qnorm({a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.z+(b.z-a.z)*t,a.w+(b.w-a.w)*t});const float angle=std::acos(std::clamp(d,-1.0F,1.0F)),s=std::sin(angle);const float wa=std::sin((1-t)*angle)/s,wb=std::sin(t*angle)/s;return qnorm({a.x*wa+b.x*wb,a.y*wa+b.y*wb,a.z*wa+b.z*wb,a.w*wa+b.w*wb});}
 Vec3f normalizedVector(Vec3f v){const float n=length(v);return n>1e-7F?mul(v,1.0F/n):Vec3f{0,1,0};}
 }
@@ -73,8 +80,12 @@ std::vector<Vertex> skinMesh(const Skeleton& skeleton,const std::vector<Vertex>&
  return out;
 }
 Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
-void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;}
-void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
+void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;blending_=false;blendDuration_=blendElapsed_=0.0F;}
+void Animator::crossFade(const Clip& clip,float blendDuration,bool looping){
+ if(!std::isfinite(blendDuration)||blendDuration<=0.0F)throw std::invalid_argument("Animation cross-fade duration must be finite and positive");
+ clip.validate(skeleton_);blendSource_=skeleton_;clip_=clip;time_=0;looping_=looping;blendDuration_=blendDuration;blendElapsed_=0.0F;blending_=true;
+}
+void Animator::stop()noexcept{clip_.reset();time_=0;blending_=false;blendDuration_=blendElapsed_=0.0F;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}}
 void Animator::update(float delta){
     if(!std::isfinite(delta)||delta<0)throw std::invalid_argument("Animation delta must be finite and non-negative");
     if(!clip_) return;
@@ -82,12 +93,24 @@ void Animator::update(float delta){
     if(clip_->duration>0){if(looping_)time_=std::fmod(time_,clip_->duration);else time_=std::min(time_,clip_->duration);}
     for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;j.scale=j.bindScale;}
     for(const auto& track:clip_->tracks){if(!track.positions.empty())skeleton_.joints[track.joint].position=sample(track.positions,time_);if(!track.rotations.empty())skeleton_.joints[track.joint].rotationDegrees=sample(track.rotations,time_);if(!track.scales.empty())skeleton_.joints[track.joint].scale=sample(track.scales,time_);}
+    if(blending_){
+        blendElapsed_=std::min(blendDuration_,blendElapsed_+delta);
+        const float alpha=blendDuration_>0.0F?blendElapsed_/blendDuration_:1.0F;
+        for(std::size_t i=0;i<skeleton_.joints.size();++i){
+            auto& target=skeleton_.joints[i];const auto& source=blendSource_.joints[i];
+            target.position=add(source.position,mul(sub(target.position,source.position),alpha));
+            target.scale=add(source.scale,mul(sub(target.scale,source.scale),alpha));
+            target.rotationDegrees=qtoEuler(qslerp(qfromEuler(source.rotationDegrees),qfromEuler(target.rotationDegrees),alpha));
+        }
+        if(blendElapsed_>=blendDuration_)blending_=false;
+    }
 }
 const Skeleton& Animator::skeleton()const noexcept{return skeleton_;}
 float Animator::time()const noexcept{return time_;}
 AnimatorDebugSnapshot Animator::debugSnapshot()const{
  AnimatorDebugSnapshot snapshot;snapshot.playing=clip_.has_value();snapshot.looping=looping_;snapshot.time=time_;
  if(clip_){snapshot.clipName=clip_->name;snapshot.duration=clip_->duration;}
+ snapshot.blending=blending_;snapshot.blendProgress=blending_&&blendDuration_>0.0F?blendElapsed_/blendDuration_:1.0F;
  snapshot.worldPose=evaluateWorldPose(skeleton_);
  snapshot.localPositions.reserve(skeleton_.joints.size());snapshot.localRotations.reserve(skeleton_.joints.size());snapshot.localScales.reserve(skeleton_.joints.size());
  for(const auto& joint:skeleton_.joints){snapshot.localPositions.push_back(joint.position);snapshot.localRotations.push_back(joint.rotationDegrees);snapshot.localScales.push_back(joint.scale);}
