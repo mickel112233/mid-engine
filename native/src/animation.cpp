@@ -55,7 +55,7 @@ IkResult solveCcd(Skeleton& skeleton,const std::vector<std::size_t>& chain,Vec3f
     auto& end=skeleton.joints[chain.back()].position;
     float error=length(sub(target,end));std::size_t iteration=0;
     for(;iteration<maxIterations&&error>tolerance;++iteration){
-        for(std::size_t index=chain.size()-1;index-->0;){
+        for(std::size_t index=chain.size()-1;index-->1;){
             auto& pivot=skeleton.joints[chain[index]].position;
             Vec3f toEnd=sub(end,pivot),toTarget=sub(target,pivot);
             const float a=length(toEnd),b=length(toTarget);if(a<1e-7F||b<1e-7F)continue;
