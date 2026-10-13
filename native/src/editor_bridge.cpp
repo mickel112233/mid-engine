@@ -10,7 +10,6 @@ namespace mid::editor {
 namespace {
 using render::Vec3f;
 Vec3f add(Vec3f a,Vec3f b){return {a.x+b.x,a.y+b.y,a.z+b.z};}
-Vec3f mul(Vec3f a,float s){return {a.x*s,a.y*s,a.z*s};}
 Vec3f rotate(Vec3f v,Vec3f degrees) {
     constexpr float pi=3.14159265358979323846F;
     const float x=degrees.x*pi/180.0F,y=degrees.y*pi/180.0F,z=degrees.z*pi/180.0F;
