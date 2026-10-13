@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 namespace mid::render::gl33 {
-using Enum=std::uint32_t; using UInt=std::uint32_t; using Int=std::int32_t; using Sizei=std::int32_t; using Sizeiptr=std::ptrdiff_t; using Boolean=std::uint8_t; using Float=float; using Char=char;
+using Enum=std::uint32_t; using UInt=std::uint32_t; using UInt64=std::uint64_t; using Int=std::int32_t; using Sizei=std::int32_t; using Sizeiptr=std::ptrdiff_t; using Boolean=std::uint8_t; using Float=float; using Char=char;
 // Host supplies functions loaded by its platform loader (GLAD, SDL_GL_GetProcAddress, GLFW, etc.).
 // A current OpenGL 3.3 core context is required for construction and every device call.
 struct Functions {
@@ -17,6 +17,9 @@ struct Functions {
  Int (*GetUniformLocation)(UInt,const Char*){}; void (*UniformMatrix4fv)(Int,Sizei,Boolean,const Float*){}; void (*Uniform3f)(Int,Float,Float,Float){}; void (*Uniform4f)(Int,Float,Float,Float,Float){}; void (*Uniform1f)(Int,Float){}; void (*Uniform1i)(Int,Int){};
  void (*DrawElementsInstanced)(Enum,Sizei,Enum,const void*,Sizei){}; void (*DrawElements)(Enum,Sizei,Enum,const void*){};
  void (*Enable)(Enum){}; void (*Disable)(Enum){}; void (*BlendFunc)(Enum,Enum){}; void (*DepthMask)(Boolean){}; void (*DepthFunc)(Enum){}; void (*Clear)(Enum){}; void (*ClearColor)(Float,Float,Float,Float){}; void (*Viewport)(Int,Int,Sizei,Sizei){};
+ void (*GenFramebuffers)(Sizei,UInt*){}; void (*DeleteFramebuffers)(Sizei,const UInt*){}; void (*BindFramebuffer)(Enum,UInt){}; void (*FramebufferTexture2D)(Enum,Enum,Enum,UInt,Int){}; void (*FramebufferRenderbuffer)(Enum,Enum,Enum,UInt){}; Enum (*CheckFramebufferStatus)(Enum){};
+ void (*GenRenderbuffers)(Sizei,UInt*){}; void (*DeleteRenderbuffers)(Sizei,const UInt*){}; void (*BindRenderbuffer)(Enum,UInt){}; void (*RenderbufferStorage)(Enum,Enum,Sizei,Sizei){};
+ void (*GenQueries)(Sizei,UInt*){}; void (*DeleteQueries)(Sizei,const UInt*){}; void (*BeginQuery)(Enum,UInt){}; void (*EndQuery)(Enum){}; void (*GetQueryObjectiv)(UInt,Enum,Int*){}; void (*GetQueryObjectui64v)(UInt,Enum,UInt64*){};
  void (*GenTextures)(Sizei,UInt*){}; void (*DeleteTextures)(Sizei,const UInt*){}; void (*BindTexture)(Enum,UInt){}; void (*TexImage2D)(Enum,Int,Int,Sizei,Sizei,Int,Enum,Enum,const void*){}; void (*TexParameteri)(Enum,Enum,Int){}; void (*ActiveTexture)(Enum){};
 };
 class OpenGL33Device final : public RenderDevice {
@@ -34,6 +37,7 @@ public:
  void setEntityTransform(std::uint64_t entityId,const std::array<float,16>& columnMajorMatrix);
  void uploadRgba8(ResourceId texture,std::uint32_t width,std::uint32_t height,const std::uint8_t* pixels,std::size_t byteCount);
  void bindBaseColorTexture(ResourceId material,ResourceId texture);
+ void setViewport(Sizei width,Sizei height);
  [[nodiscard]] const RenderStats& lastStats() const noexcept;
 private:
  struct GpuMesh { UInt vao{0},vertexBuffer{0},indexBuffer{0},instanceBuffer{0}; Sizei indexCount{0}; };
@@ -41,7 +45,8 @@ private:
  struct GpuResource { ResourceKind kind{ResourceKind::Other}; UInt handle{0}; };
  [[nodiscard]] UInt compile(Enum type,const char* source);
  [[nodiscard]] Int uniform(const char* name) const;
- Functions gl_; UInt program_{0}; ResourceId nextResource_{1};
+ Functions gl_; UInt program_{0},shadowProgram_{0},shadowFramebuffer_{0},shadowTexture_{0},shadowColorBuffer_{0},gpuQuery_{0}; ResourceId nextResource_{1};
+ Sizei viewportWidth_{1280},viewportHeight_{720}; Sizei shadowSize_{1024}; bool shadowEnabled_{false},queryPending_{false},queryActive_{false}; double lastGpuMilliseconds_{0.0}; bool gpuTimingAvailable_{false};
  std::unordered_map<ResourceId,GpuMesh> meshes_;
  std::unordered_map<ResourceId,GpuMaterial> materials_;
  std::unordered_map<ResourceId,GpuResource> resources_;
