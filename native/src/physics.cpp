@@ -31,7 +31,10 @@ void PhysicsWorld::addBody(RigidBody bodyValue) {
 bool PhysicsWorld::removeBody(std::uint64_t id) {
     const auto it=std::find_if(bodies_.begin(),bodies_.end(),[&](const auto& b){return b.entityId==id;});
     if(it==bodies_.end())return false;
-    bodies_.erase(it);\n    std::erase_if(joints_,[&](const DistanceJoint& joint){return joint.a==id||joint.b==id;});\n    std::erase_if(ropes_,[&](const RopeJoint& joint){return joint.a==id||joint.b==id;});\n    return true;
+    bodies_.erase(it);
+    std::erase_if(joints_,[&](const DistanceJoint& joint){return joint.a==id||joint.b==id;});
+    std::erase_if(ropes_,[&](const RopeJoint& joint){return joint.a==id||joint.b==id;});
+    return true;
 }
 RigidBody* PhysicsWorld::body(std::uint64_t id) noexcept {for(auto& b:bodies_)if(b.entityId==id)return &b;return nullptr;}
 const RigidBody* PhysicsWorld::body(std::uint64_t id) const noexcept {for(const auto& b:bodies_)if(b.entityId==id)return &b;return nullptr;}
