@@ -47,7 +47,7 @@ private:
     struct Entry {
         AssetSnapshot snapshot;
         std::vector<std::byte> data;
-        std::future<void> task;
+        std::shared_future<void> task;
         std::uint64_t lastUse{0};
     };
     static std::vector<std::byte> readFile(const std::filesystem::path& path);
