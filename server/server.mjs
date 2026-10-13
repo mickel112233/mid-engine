@@ -11,6 +11,7 @@ const SCENE_FILE = join(PROJECT_DIR, "scene.json");
 const HOST = process.env.MID_ENGINE_HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || 4173);
 const MAX_BODY_BYTES = 64 * 1024;
+const MAX_SCENE_BYTES = 4 * 1024 * 1024;
 const STATIC_FILES = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
@@ -61,11 +62,11 @@ function send(response, status, body, headers = {}) {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ...headers });
   response.end(JSON.stringify(body));
 }
-async function readJson(request) {
+async function readJson(request, maxBytes = MAX_BODY_BYTES) {
   let body = "";
   for await (const chunk of request) {
     body += chunk;
-    if (Buffer.byteLength(body) > MAX_BODY_BYTES) throw Object.assign(new Error("Request body is too large."), { status: 413 });
+    if (Buffer.byteLength(body) > maxBytes) throw Object.assign(new Error("Request body is too large."), { status: 413 });
   }
   if (!body.trim()) return {};
   try { return JSON.parse(body); }
@@ -181,7 +182,7 @@ export function createMidEngineServer() {
       if (request.method === "GET" && url.pathname === "/api/openapi.json") return send(response, 200, OPENAPI);
       if (request.method === "GET" && url.pathname === "/api/scene") return send(response, 200, { scene, assets });
       if (request.method === "POST" && url.pathname === "/api/scene/restore") {
-        const body = await readJson(request);
+        const body = await readJson(request, MAX_SCENE_BYTES);
         if (!body.scene || typeof body.scene !== "object") return send(response, 400, { error: "invalid_scene", message: "A scene snapshot is required." });
         context.setScene(body.scene);
         const event = addEvent("scene.restored", "Scene snapshot restored by editor history.");
