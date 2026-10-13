@@ -6,7 +6,11 @@ on:
   workflow_dispatch:
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,6 +21,6 @@ jobs:
       - name: Configure native C++20 engine
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build native engine
-        run: cmake --build build --parallel 2
+        run: cmake --build build --config Release --parallel 2
       - name: Test native engine
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build -C Release --output-on-failure
