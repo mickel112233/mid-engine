@@ -24,8 +24,8 @@ ImageRgba8 decodeImage(std::span<const std::byte> b){
   png_image image{};image.version=PNG_IMAGE_VERSION;
   if(!png_image_begin_read_from_memory(&image,b.data(),b.size()))throw std::invalid_argument("PNG header decode failed");
   image.format=PNG_FORMAT_RGBA;
+  if(image.width==0||image.height==0||static_cast<std::uint64_t>(image.width)*image.height>std::numeric_limits<std::size_t>::max()/4U){png_image_free(&image);throw std::length_error("PNG dimensions exceed image memory limits");}
   const auto byteCount=PNG_IMAGE_SIZE(image);
-  if(image.width==0||image.height==0||byteCount>std::numeric_limits<std::size_t>::max()){png_image_free(&image);throw std::length_error("PNG dimensions exceed image memory limits");}
   ImageRgba8 out;out.width=image.width;out.height=image.height;out.pixels.resize(static_cast<std::size_t>(byteCount));
   if(!png_image_finish_read(&image,nullptr,out.pixels.data(),0,nullptr)){const std::string error=image.message;png_image_free(&image);throw std::invalid_argument("PNG pixel decode failed: "+error);}
   png_image_free(&image);return out;
