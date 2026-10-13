@@ -108,6 +108,7 @@ ImageRgba8 decodeImage(std::span<const std::byte> b){
  throw std::invalid_argument("Unsupported image format. Built-in support: BMP and Radiance HDR; optional support: PNG and JPEG.");
 }
 ImageRgba32F decodeHdr(std::span<const std::byte> b){
+ if(b.size()<10)throw std::invalid_argument("Truncated Radiance HDR header");
  std::size_t cursor=0;const auto magic=readLine(b,cursor);
  if(magic!="#?RADIANCE"&&magic!="#?RGBE")throw std::invalid_argument("Invalid Radiance HDR signature");
  bool formatFound=false;std::string_view line;
