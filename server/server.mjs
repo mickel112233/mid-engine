@@ -173,6 +173,13 @@ export function createMidEngineServer() {
       if (request.method === "GET" && url.pathname === "/api/health") return send(response, 200, { ok: true, name: "Mid Engine", version: "0.1.0", host: HOST });
       if (request.method === "GET" && url.pathname === "/api/openapi.json") return send(response, 200, OPENAPI);
       if (request.method === "GET" && url.pathname === "/api/scene") return send(response, 200, { scene, assets });
+      if (request.method === "POST" && url.pathname === "/api/scene/restore") {
+        const body = await readJson(request);
+        if (!body.scene || typeof body.scene !== "object") return send(response, 400, { error: "invalid_scene", message: "A scene snapshot is required." });
+        context.setScene(body.scene);
+        const event = addEvent("scene.restored", "Scene snapshot restored by editor history.");
+        return send(response, 200, { ok: true, scene, event });
+      }
       if (request.method === "GET" && url.pathname === "/api/tools") return send(response, 200, { tools: TOOL_DEFINITIONS, safety: { loopbackOnly: HOST === "127.0.0.1" || HOST === "localhost", destructiveOperationsRequireExplicitConfirmation: true } });
       if (request.method === "GET" && url.pathname === "/api/events") return send(response, 200, { events: context.getEvents(Number(url.searchParams.get("limit")) || 50) });
       if (request.method === "POST" && url.pathname === "/api/save") {
