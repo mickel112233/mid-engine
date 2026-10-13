@@ -6,6 +6,7 @@ Mid Engine exposes a local, provider-neutral tool API. Any AI agent that can mak
 
 Start Mid Engine with `npm start`. The default server is `http://127.0.0.1:4173`.
 
+- `GET /openapi.json` — OpenAPI 3.1 contract
 - `GET /api/health` — readiness and version
 - `GET /api/scene` — current scene and asset registry
 - `GET /api/tools` — tool manifest and safety metadata
@@ -48,6 +49,10 @@ The response above is illustrative; actual IDs and timestamps are generated at r
 | `get_events` | Read recent activity | No |
 
 To delete, the caller must supply `confirm: "delete:<entity-id>"`. A production agent UI should obtain that confirmation from the user; an agent must not silently invent consent.
+
+## MCP-compatible clients
+
+A dependency-free MCP stdio adapter is included at `server/mcp-stdio.mjs`. Configure an MCP client to launch `node` with the absolute path to that file; an example configuration is in `docs/mcp-config.example.json`. The adapter supports `initialize`, `ping`, `tools/list`, and `tools/call`, and delegates calls to the same validated tool registry as the HTTP API. Its standard output is reserved for JSON-RPC messages. It is a first adapter and should be exercised against the target MCP client before relying on it in production.
 
 ## Recommended agent loop
 
