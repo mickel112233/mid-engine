@@ -1,0 +1,17 @@
+{
+  "name": "mid-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An agent-friendly, local-first game engine and editor foundation.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.mjs",
+    "dev": "node --watch server/server.mjs",
+    "test": "node --test",
+    "check": "node --check server/server.mjs && node --check server/agent-tools.mjs && node --check engine/scene.js && node --check app.js",
+    "test:watch": "node --test --watch"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
