@@ -37,8 +37,8 @@ void sceneCreationAndSerialization() {
     check(scene.get(camera).name == "Camera", "entity lookup returns stored entity");
     const std::string json = scene.toJson();
     check(json.find("\"schemaVersion\":1") != std::string::npos, "serialization includes schema version");
-    check(json.find("Test \\\"Scene\\\"") != std::string::npos, "serialization escapes quotes");
-    check(json.find("Mesh\\\\Root") != std::string::npos, "serialization escapes backslashes");
+    check(json.find(R"(Test \"Scene\")") != std::string::npos, "serialization escapes quotes");
+    check(json.find(R"(Mesh\\Root)") != std::string::npos, "serialization escapes backslashes");
     check(json.find("\"id\":1") < json.find("\"id\":2"), "serialization order is deterministic");
 }
 
