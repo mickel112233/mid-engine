@@ -41,6 +41,24 @@ ImportedModel importModelFile(const std::filesystem::path& path) {
  const aiScene* scene=importer.ReadFile(path.string(),aiProcess_Triangulate|aiProcess_GenSmoothNormals|aiProcess_JoinIdenticalVertices|aiProcess_ImproveCacheLocality|aiProcess_SortByPType|aiProcess_ValidateDataStructure);
  if(!scene||!scene->mRootNode) throw std::runtime_error("Assimp model import failed: "+std::string(importer.GetErrorString()));
  ImportedModel out; out.meshes.reserve(scene->mNumMeshes); out.materials.reserve(scene->mNumMaterials);
+ out.embeddedTextures.reserve(scene->mNumTextures);
+ for(unsigned int i=0;i<scene->mNumTextures;++i){
+  const aiTexture* source=scene->mTextures[i]; if(!source)continue;
+  ImportedTexture texture; texture.name=source->mFilename.length?source->mFilename.C_Str():"*"+std::to_string(i);
+  texture.formatHint=source->achFormatHint; texture.width=source->mWidth; texture.height=source->mHeight;
+  texture.compressed=source->mHeight==0;
+  if(texture.compressed){
+   texture.bytes.resize(source->mWidth);
+   const auto* raw=reinterpret_cast<const std::uint8_t*>(source->pcData);
+   if(source->mWidth>0&&raw)std::copy(raw,raw+source->mWidth,texture.bytes.begin());
+  }else{
+   const std::uint64_t pixelCount=static_cast<std::uint64_t>(source->mWidth)*source->mHeight;
+   if(pixelCount>static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()/4U))throw std::length_error("Embedded texture dimensions exceed memory limits");
+   texture.bytes.resize(static_cast<std::size_t>(pixelCount)*4U);
+   for(std::size_t p=0;p<static_cast<std::size_t>(pixelCount);++p){const auto& texel=source->pcData[p];const auto o=p*4U;texture.bytes[o]=texel.r;texture.bytes[o+1]=texel.g;texture.bytes[o+2]=texel.b;texture.bytes[o+3]=texel.a;}
+  }
+  out.embeddedTextures.push_back(std::move(texture));
+ }
  for(unsigned int i=0;i<scene->mNumMaterials;++i) {
   const aiMaterial* source=scene->mMaterials[i]; ModelMaterial target;
   aiString name; if(source->Get(AI_MATKEY_NAME,name)==AI_SUCCESS) target.material.name=name.C_Str();
@@ -95,7 +113,7 @@ ImportedModel importModelFile(const std::filesystem::path& path) {
   }
   clip.validate(out.skeleton);out.animations.push_back(std::move(clip));
  }
- if(scene->mNumTextures>0)out.warnings.emplace_back("Embedded textures are reported by Assimp but must be extracted/decoded by the asset pipeline.");
+
  return out;
 #endif
 }
