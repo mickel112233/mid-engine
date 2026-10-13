@@ -42,6 +42,18 @@ void SceneRenderBridge::setRenderComponents(EntityId entity,RenderComponents com
     components_[entity]=std::move(components);
 }
 bool SceneRenderBridge::removeRenderComponents(EntityId entity){return components_.erase(entity)!=0;}
+std::array<float,16> SceneRenderBridge::modelMatrix(const Scene& scene,EntityId entity) const {
+    std::unordered_set<EntityId> visiting;const auto world=resolve(scene,entity,visiting);
+    constexpr float pi=3.14159265358979323846F;
+    const float x=world.rotation.x*pi/180.0F,y=world.rotation.y*pi/180.0F,z=world.rotation.z*pi/180.0F;
+    const float cx=std::cos(x),sx=std::sin(x),cy=std::cos(y),sy=std::sin(y),cz=std::cos(z),sz=std::sin(z);
+    return {
+        cz*cy*world.scale.x, sz*cy*world.scale.x, -sy*world.scale.x, 0,
+        (cz*sy*sx-sz*cx)*world.scale.y, (sz*sy*sx+cz*cx)*world.scale.y, cy*sx*world.scale.y, 0,
+        (cz*sy*cx+sz*sx)*world.scale.z, (sz*sy*cx-cz*sx)*world.scale.z, cy*cx*world.scale.z, 0,
+        world.position.x,world.position.y,world.position.z,1
+    };
+}
 RenderSceneSnapshot SceneRenderBridge::build(const Scene& scene,const render::Camera& camera,const render::DirectionalLight& sun) const {
     camera.validate();
     RenderSceneSnapshot snapshot{camera,sun,{}};
