@@ -13,7 +13,7 @@ constexpr Enum GL_ARRAY_BUFFER=0x8892,GL_ELEMENT_ARRAY_BUFFER=0x8893,GL_STATIC_D
 constexpr Enum GL_FLOAT=0x1406,GL_UNSIGNED_INT=0x1405,GL_TRIANGLES=0x0004,GL_TEXTURE_2D=0x0DE1,GL_RGBA=0x1908,GL_RGBA8=0x8058,GL_UNSIGNED_BYTE=0x1401;
 constexpr Enum GL_TEXTURE_MIN_FILTER=0x2801,GL_TEXTURE_MAG_FILTER=0x2800,GL_TEXTURE_WRAP_S=0x2802,GL_TEXTURE_WRAP_T=0x2803,GL_LINEAR=0x2601,GL_REPEAT=0x2901;
 constexpr Enum GL_VERTEX_SHADER=0x8B31,GL_FRAGMENT_SHADER=0x8B30,GL_COMPILE_STATUS=0x8B81,GL_LINK_STATUS=0x8B82,GL_INFO_LOG_LENGTH=0x8B84;
-constexpr Enum GL_DEPTH_TEST=0x0B71,GL_LEQUAL=0x0203,GL_COLOR_BUFFER_BIT=0x00004000,GL_DEPTH_BUFFER_BIT=0x00000100,GL_TEXTURE0=0x84C0;
+constexpr Enum GL_DEPTH_TEST=0x0B71,GL_LEQUAL=0x0203,GL_COLOR_BUFFER_BIT=0x00004000,GL_DEPTH_BUFFER_BIT=0x00000100,GL_TEXTURE0=0x84C0,GL_BLEND=0x0BE2,GL_SRC_ALPHA=0x0302,GL_ONE_MINUS_SRC_ALPHA=0x0303;
 struct V3 {float x,y,z;};
 V3 mul(V3 a,float s){return {a.x*s,a.y*s,a.z*s};}
 float dot(V3 a,V3 b){return a.x*b.x+a.y*b.y+a.z*b.z;}
@@ -45,7 +45,7 @@ uniform vec4 uBaseColor; uniform vec3 uLightDirection; uniform vec3 uCameraPosit
 out vec4 outColor;
 void main(){vec4 base=uBaseColor*vColor;if(uHasTexture==1)base*=texture(uBaseColorTexture,vUv);vec3 N=normalize(vNormal),V=normalize(uCameraPosition-vWorldPosition),L=normalize(-uLightDirection),H=normalize(V+L);float nl=max(dot(N,L),0.0),nv=max(dot(N,V),0.001),nh=max(dot(N,H),0.0),vh=max(dot(V,H),0.0);float r=clamp(uRoughness,0.05,1.0),a=r*r,a2=a*a,d=nh*nh*(a2-1.0)+1.0;float D=a2/max(3.14159265*d*d,0.001),k=(r+1.0)*(r+1.0)/8.0,G=(nv/(nv*(1.0-k)+k))*(nl/(nl*(1.0-k)+k));vec3 f0=mix(vec3(0.04),base.rgb,uMetallic),F=f0+(1.0-f0)*pow(1.0-vh,5.0);vec3 spec=D*G*F/max(4.0*nv*max(nl,0.001),0.001),diff=(1.0-F)*(1.0-uMetallic)*base.rgb/3.14159265;vec3 hemi=mix(vec3(0.07,0.06,0.05),vec3(0.25,0.34,0.48),clamp(N.y*0.5+0.5,0.0,1.0));outColor=vec4(base.rgb*hemi*0.35+(diff+spec)*nl,base.a);})";
 bool allFunctions(const Functions& g){
- return g.GenBuffers&&g.DeleteBuffers&&g.BindBuffer&&g.BufferData&&g.GenVertexArrays&&g.DeleteVertexArrays&&g.BindVertexArray&&g.EnableVertexAttribArray&&g.DisableVertexAttribArray&&g.VertexAttribPointer&&g.VertexAttribDivisor&&g.CreateShader&&g.ShaderSource&&g.CompileShader&&g.GetShaderiv&&g.GetShaderInfoLog&&g.DeleteShader&&g.CreateProgram&&g.AttachShader&&g.LinkProgram&&g.GetProgramiv&&g.GetProgramInfoLog&&g.DeleteProgram&&g.UseProgram&&g.GetUniformLocation&&g.UniformMatrix4fv&&g.Uniform3f&&g.Uniform4f&&g.Uniform1f&&g.Uniform1i&&g.DrawElementsInstanced&&g.DrawElements&&g.Enable&&g.DepthFunc&&g.Clear&&g.ClearColor&&g.GenTextures&&g.DeleteTextures&&g.BindTexture&&g.TexImage2D&&g.TexParameteri&&g.ActiveTexture;
+ return g.GenBuffers&&g.DeleteBuffers&&g.BindBuffer&&g.BufferData&&g.GenVertexArrays&&g.DeleteVertexArrays&&g.BindVertexArray&&g.EnableVertexAttribArray&&g.DisableVertexAttribArray&&g.VertexAttribPointer&&g.VertexAttribDivisor&&g.CreateShader&&g.ShaderSource&&g.CompileShader&&g.GetShaderiv&&g.GetShaderInfoLog&&g.DeleteShader&&g.CreateProgram&&g.AttachShader&&g.LinkProgram&&g.GetProgramiv&&g.GetProgramInfoLog&&g.DeleteProgram&&g.UseProgram&&g.GetUniformLocation&&g.UniformMatrix4fv&&g.Uniform3f&&g.Uniform4f&&g.Uniform1f&&g.Uniform1i&&g.DrawElementsInstanced&&g.DrawElements&&g.Enable&&g.Disable&&g.BlendFunc&&g.DepthMask&&g.DepthFunc&&g.Clear&&g.ClearColor&&g.GenTextures&&g.DeleteTextures&&g.BindTexture&&g.TexImage2D&&g.TexParameteri&&g.ActiveTexture;
 }
 }
 OpenGL33Device::OpenGL33Device(Functions functions):gl_(functions){
@@ -112,11 +112,12 @@ void OpenGL33Device::bindBaseColorTexture(ResourceId material,ResourceId texture
 void OpenGL33Device::submit(const RenderPlan& plan,const Camera& camera,const DirectionalLight& light){
  camera.validate();const auto vp=viewProjection(camera);gl_.UseProgram(program_);gl_.UniformMatrix4fv(uniform("uViewProjection"),1,0,vp.data());gl_.Uniform3f(uniform("uLightDirection"),light.direction.x,light.direction.y,light.direction.z);gl_.Uniform3f(uniform("uCameraPosition"),camera.position.x,camera.position.y,camera.position.z);gl_.Uniform1i(uniform("uBaseColorTexture"),0);
  stats_=plan.stats;stats_.drawCalls=0;stats_.batches=0;stats_.estimatedInstanceCount=0;
- auto drawBatches=[&](const std::vector<DrawBatch>& batches){
+ auto drawBatches=[&](const std::vector<DrawBatch>& batches,bool transparent){
   for(const auto& batch:batches){const auto meshIt=meshes_.find(batch.mesh);const auto materialIt=materials_.find(batch.material);if(meshIt==meshes_.end()||materialIt==materials_.end())continue;const auto& mesh=meshIt->second;const auto& mat=materialIt->second;
    gl_.Uniform4f(uniform("uBaseColor"),mat.value.baseColor.x,mat.value.baseColor.y,mat.value.baseColor.z,mat.value.baseColor.w);gl_.Uniform1f(uniform("uMetallic"),mat.value.metallic);gl_.Uniform1f(uniform("uRoughness"),mat.value.roughness);
    const auto texture=resources_.find(mat.texture);const bool hasTexture=mat.texture!=0&&texture!=resources_.end()&&texture->second.kind==ResourceKind::Texture;gl_.Uniform1i(uniform("uHasTexture"),hasTexture?1:0);if(hasTexture){gl_.ActiveTexture(GL_TEXTURE0);gl_.BindTexture(GL_TEXTURE_2D,texture->second.handle);}
    std::vector<std::array<float,16>> instances;instances.reserve(batch.entityIds.size());for(auto entity:batch.entityIds){const auto tr=transforms_.find(entity);if(tr!=transforms_.end())instances.push_back(tr->second);}
+   if(transparent)std::sort(instances.begin(),instances.end(),[&](const auto& a,const auto& b){const float ax=a[12]-camera.position.x,ay=a[13]-camera.position.y,az=a[14]-camera.position.z,bx=b[12]-camera.position.x,by=b[13]-camera.position.y,bz=b[14]-camera.position.z;return ax*ax+ay*ay+az*az>bx*bx+by*by+bz*bz;});
    if(instances.empty())continue;
    gl_.BindVertexArray(mesh.vao);
    if(instances.size()>1){std::vector<float> data;data.reserve(instances.size()*16);for(const auto& m:instances)data.insert(data.end(),m.begin(),m.end());gl_.BindBuffer(GL_ARRAY_BUFFER,mesh.instanceBuffer);gl_.BufferData(GL_ARRAY_BUFFER,static_cast<Sizeiptr>(data.size()*sizeof(float)),data.data(),GL_DYNAMIC_DRAW);
@@ -127,7 +128,7 @@ void OpenGL33Device::submit(const RenderPlan& plan,const Camera& camera,const Di
    ++stats_.batches;
   }
  };
- drawBatches(plan.opaqueBatches);drawBatches(plan.transparentBatches);gl_.BindVertexArray(0);
+ drawBatches(plan.opaqueBatches,false);gl_.Enable(GL_BLEND);gl_.BlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);gl_.DepthMask(0);drawBatches(plan.transparentBatches,true);gl_.DepthMask(1);gl_.Disable(GL_BLEND);gl_.BindVertexArray(0);
 }
 void OpenGL33Device::endFrame(){}
 const RenderStats& OpenGL33Device::lastStats()const noexcept{return stats_;}
