@@ -53,7 +53,7 @@ Pose evaluateWorldPose(const Skeleton& skeleton,bool bindPose){
   if(state[i]==2) return;
   if(state[i]==1) throw std::logic_error("Skeleton hierarchy cycle");
   state[i]=1;const auto& j=skeleton.joints[i];const Vec3f localPosition=bindPose?j.bindPosition:j.position;const Vec3f localRotation=bindPose?j.bindRotationDegrees:j.rotationDegrees;const Quat localQ=qfromEuler(localRotation);
-  if(j.parent>=0){const auto p=static_cast<std::size_t>(j.parent);self(self,p);const auto& parent=out.joints[p];const Quat parentQ=poseQuat(parent.rotationQuaternion);out.joints[i].position=add(parent.position,qrotate(parentQ,localPosition));out.joints[i].rotationQuaternion=poseVec(qmul(parentQ,localQ));const auto ps=out.joints[p].scale;const auto ls=bindPose?j.bindScale:j.scale;out.joints[i].scale={ps.x*ls.x,ps.y*ls.y,ps.z*ls.z};}
+  if(j.parent>=0){const auto p=static_cast<std::size_t>(j.parent);self(self,p);const auto& parent=out.joints[p];const Quat parentQ=poseQuat(parent.rotationQuaternion);const auto parentScale=out.joints[p].scale;const Vec3f scaledLocal{localPosition.x*parentScale.x,localPosition.y*parentScale.y,localPosition.z*parentScale.z};out.joints[i].position=add(parent.position,qrotate(parentQ,scaledLocal));out.joints[i].rotationQuaternion=poseVec(qmul(parentQ,localQ));const auto ps=out.joints[p].scale;const auto ls=bindPose?j.bindScale:j.scale;out.joints[i].scale={ps.x*ls.x,ps.y*ls.y,ps.z*ls.z};}
   else {out.joints[i].position=localPosition;out.joints[i].rotationQuaternion=poseVec(localQ);out.joints[i].scale=bindPose?j.bindScale:j.scale;}
   state[i]=2;
  };
