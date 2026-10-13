@@ -107,7 +107,7 @@ IkResult solveCcdConstrained(Skeleton& skeleton,const std::vector<std::size_t>& 
     }
     auto& endPosition=skeleton.joints[chain.back()].position;
     float error=length(sub(target,endPosition));std::size_t iteration=0;
-    constexpr float radiansToDegrees=57.2957795131F,degreesToRadians=0.0174532925199F;
+    constexpr float radiansToDegrees=57.2957795131F;
     for(;iteration<maxIterations&&error>tolerance;++iteration){
         for(std::size_t index=chain.size()-1;index-->1;){
             auto& joint=skeleton.joints[chain[index]];
@@ -138,7 +138,6 @@ IkResult solveCcdConstrained(Skeleton& skeleton,const std::vector<std::size_t>& 
         }
         error=length(sub(target,endPosition));
     }
-    (void)degreesToRadians;
     return {error<=tolerance,iteration,error};
 }
 } // namespace mid::animation
