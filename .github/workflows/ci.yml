@@ -14,3 +14,9 @@ jobs:
           node-version: 22
       - run: npm test
       - run: npm run check
+      - name: Configure native C++20 engine
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build native engine
+        run: cmake --build build --parallel 2
+      - name: Test native engine
+        run: ctest --test-dir build --output-on-failure
