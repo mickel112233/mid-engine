@@ -17,6 +17,12 @@ int main(){
     check(!model.embeddedTextures.front().bytes.empty(),"embedded glTF texture payload is preserved");
     check(model.embeddedTextures.front().compressed,"PNG image payload remains encoded until image-decoder upload");
     check(model.embeddedTextures.front().formatHint=="png","embedded image format hint is retained");
+    try {
+     const auto decoded=mid::assets::decodeImportedTexture(model.embeddedTextures.front());
+     check(decoded.width==1&&decoded.height==1&&decoded.pixels.size()==4,"embedded PNG is decoded into upload-ready RGBA8 pixels");
+    } catch(const std::exception& e) {
+     std::cerr<<"FAIL: embedded PNG decode threw: "<<e.what()<<'\\n';++failures;
+    }
    }
    check(model.meshMaterialIndices.size()==model.meshes.size(),"each imported mesh retains its source material index");
    check(!model.meshMaterialIndices.empty()&&model.meshMaterialIndices.front()<model.materials.size(),"imported mesh material index points at an imported material");
