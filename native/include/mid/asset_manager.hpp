@@ -55,12 +55,12 @@ private:
     void enforceBudgetLocked();
 
     mutable std::mutex mutex_;
-    std::unordered_map<AssetId, Entry> entries_;
+    mutable std::unordered_map<AssetId, Entry> entries_;
     std::unordered_map<std::string, AssetId> byPath_;
     std::size_t budget_;
     std::size_t resident_{0};
     AssetId nextId_{1};
-    std::uint64_t clock_{0};
+    mutable std::uint64_t clock_{0};
     Loader loader_;
 };
 
