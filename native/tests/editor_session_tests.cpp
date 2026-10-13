@@ -4,7 +4,7 @@
 
 int main() {
     int failures = 0;
-    auto check = [&](bool ok, const char* message) { if (!ok) { std::cerr << "FAIL: " << message << '\\n'; ++failures; } };
+    auto check = [&](bool ok, const char* message) { if (!ok) { std::cerr << "FAIL: " << message << '\n'; ++failures; } };
     mid::Scene scene("Editor test");
     const auto id = scene.createEntity("Cube");
     mid::editor::EditorSession editor(scene);
