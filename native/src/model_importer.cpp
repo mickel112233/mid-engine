@@ -83,14 +83,14 @@ ImportedModel importModelFile(const std::filesystem::path& path) {
  };
  out.nodes.reserve(scene->mNumMeshes+1U);visitNode(visitNode,scene->mRootNode,-1);
  out.skeleton.joints.reserve(sourceNodes.size());
- for(std::size_t i=0;i<sourceNodes.size();++i){aiVector3D scale,position;aiQuaternion rotation;sourceNodes[i]->mTransformation.Decompose(scale,rotation,position);const auto euler=quaternionToEulerDegrees(rotation);const render::Vec3f p{position.x,position.y,position.z};out.skeleton.joints.push_back({out.nodes[i].name,out.nodes[i].parent,p,p,euler,euler});if(std::abs(scale.x-1.0F)>1e-4F||std::abs(scale.y-1.0F)>1e-4F||std::abs(scale.z-1.0F)>1e-4F)out.warnings.emplace_back("Non-unit node scale is preserved in node matrices but not represented in the skeletal pose helper.");}
+ for(std::size_t i=0;i<sourceNodes.size();++i){aiVector3D scale,position;aiQuaternion rotation;sourceNodes[i]->mTransformation.Decompose(scale,rotation,position);const auto euler=quaternionToEulerDegrees(rotation);const render::Vec3f p{position.x,position.y,position.z};const render::Vec3f s{scale.x,scale.y,scale.z};out.skeleton.joints.push_back({out.nodes[i].name,out.nodes[i].parent,p,p,euler,euler,s,s});if(std::abs(scale.x-1.0F)>1e-4F||std::abs(scale.y-1.0F)>1e-4F||std::abs(scale.z-1.0F)>1e-4F)out.warnings.emplace_back("Non-unit node scale is preserved in node matrices but not represented in the skeletal pose helper.");}
  out.skeleton.validate();
  std::unordered_map<std::string,std::size_t> nodeByName;for(std::size_t i=0;i<out.nodes.size();++i)nodeByName.emplace(out.nodes[i].name,i);
  for(unsigned int i=0;i<scene->mNumAnimations;++i){const aiAnimation* source=scene->mAnimations[i];animation::Clip clip;clip.name=source->mName.length?source->mName.C_Str():"Animation_"+std::to_string(i);const double ticks=source->mTicksPerSecond>0?source->mTicksPerSecond:25.0;clip.duration=static_cast<float>(source->mDuration/ticks);
   for(unsigned int channelIndex=0;channelIndex<source->mNumChannels;++channelIndex){const aiNodeAnim* channel=source->mChannels[channelIndex];const auto node=nodeByName.find(channel->mNodeName.C_Str());if(node==nodeByName.end()){out.warnings.emplace_back("Animation channel references a node absent from the imported hierarchy.");continue;}animation::JointTrack track;track.joint=node->second;
    for(unsigned int k=0;k<channel->mNumPositionKeys;++k){const auto& key=channel->mPositionKeys[k];track.positions.push_back({std::clamp(static_cast<float>(key.mTime/ticks),0.0F,clip.duration),{key.mValue.x,key.mValue.y,key.mValue.z}});}
    for(unsigned int k=0;k<channel->mNumRotationKeys;++k){const auto& key=channel->mRotationKeys[k];track.rotations.push_back({std::clamp(static_cast<float>(key.mTime/ticks),0.0F,clip.duration),quaternionToEulerDegrees(key.mValue)});}
-   if(channel->mNumScalingKeys>0)out.warnings.emplace_back("Animation scale keys are not represented by the current position/rotation clip format.");
+   for(unsigned int k=0;k<channel->mNumScalingKeys;++k){const auto& key=channel->mScalingKeys[k];track.scales.push_back({std::clamp(static_cast<float>(key.mTime/ticks),0.0F,clip.duration),{key.mValue.x,key.mValue.y,key.mValue.z}});}
    clip.tracks.push_back(std::move(track));
   }
   clip.validate(out.skeleton);out.animations.push_back(std::move(clip));
