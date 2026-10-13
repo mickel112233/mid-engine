@@ -8,20 +8,49 @@ uniform vec3 uTint;
 uniform vec3 uLightDirection;
 uniform float uAmbient;
 varying vec3 vColor;
-varying float vLight;
+varying vec3 vNormal;
+varying vec3 vWorldPosition;
 void main() {
-  vec3 worldNormal = normalize(mat3(uModel) * aNormal);
-  vLight = uAmbient + (1.0 - uAmbient) * max(dot(worldNormal, normalize(-uLightDirection)), 0.0);
+  vec4 worldPosition = uModel * vec4(aPosition, 1.0);
+  vWorldPosition = worldPosition.xyz;
+  vNormal = normalize(mat3(uModel) * aNormal);
   vColor = aColor * uTint;
-  gl_Position = uViewProjection * uModel * vec4(aPosition, 1.0);
+  gl_Position = uViewProjection * worldPosition;
 }`;
 
 const FRAGMENT_SHADER = `
 precision mediump float;
+uniform vec3 uLightDirection;
+uniform vec3 uCameraPosition;
+uniform float uAmbient;
+uniform float uMetallic;
+uniform float uRoughness;
 varying vec3 vColor;
-varying float vLight;
+varying vec3 vNormal;
+varying vec3 vWorldPosition;
 void main() {
-  gl_FragColor = vec4(vColor * vLight, 1.0);
+  vec3 N = normalize(vNormal);
+  vec3 V = normalize(uCameraPosition - vWorldPosition);
+  vec3 L = normalize(-uLightDirection);
+  vec3 H = normalize(V + L);
+  float NdotL = max(dot(N, L), 0.0);
+  float NdotV = max(dot(N, V), 0.001);
+  float NdotH = max(dot(N, H), 0.0);
+  float VdotH = max(dot(V, H), 0.0);
+  float roughness = clamp(uRoughness, 0.05, 1.0);
+  float alpha = roughness * roughness;
+  float alpha2 = alpha * alpha;
+  float d = NdotH * NdotH * (alpha2 - 1.0) + 1.0;
+  float D = alpha2 / max(3.14159265 * d * d, 0.001);
+  float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
+  float G = (NdotV / (NdotV * (1.0-k) + k)) * (NdotL / (NdotL * (1.0-k) + k));
+  vec3 F0 = mix(vec3(0.04), vColor, uMetallic);
+  vec3 F = F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
+  vec3 specular = D * G * F / max(4.0 * NdotV * max(NdotL, 0.001), 0.001);
+  vec3 diffuse = (1.0 - F) * (1.0 - uMetallic) * vColor / 3.14159265;
+  vec3 direct = (diffuse + specular) * NdotL;
+  vec3 ambient = vColor * uAmbient;
+  gl_FragColor = vec4(ambient + direct, 1.0);
 }`;
 
 const IDENTITY = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
@@ -135,7 +164,7 @@ export function createWebGLRenderer(canvas) {
     tint:gl.getUniformLocation(program,"uTint"),
     normal:gl.getAttribLocation(program,"aNormal"),
     lightDirection:gl.getUniformLocation(program,"uLightDirection"),
-    ambient:gl.getUniformLocation(program,"uAmbient")
+    ambient:gl.getUniformLocation(program,"uAmbient"),\n    cameraPosition:gl.getUniformLocation(program,"uCameraPosition"),\n    metallic:gl.getUniformLocation(program,"uMetallic"),\n    roughness:gl.getUniformLocation(program,"uRoughness")
   };
   const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer();
   const gridVertices=createGridVertices();
@@ -188,7 +217,7 @@ export function createWebGLRenderer(canvas) {
       drawCalls++;
       gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
       const tint=entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
-      gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);
+      gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);\n      gl.uniform1f(locations.metallic,entity.type==="light"?0.18:0.08);\n      gl.uniform1f(locations.roughness,entity.type==="camera"?0.32:0.58);
       gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
     }
     return { submitted:(scene?.entities||[]).length, visible:visibleObjects, culled:culledObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt };
