@@ -1,6 +1,7 @@
 #include "mid/lua_runtime.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <stdexcept>
 #include <utility>
 #ifdef MID_ENGINE_WITH_LUA
@@ -17,7 +18,7 @@ struct LuaScriptInstance::Impl {
  lua_State* state{nullptr}; Scene* activeScene{nullptr}; LuaConfig config{};
  std::size_t instructions{0}; std::string lastError; std::vector<std::string> logs; std::vector<int> breakpoints; std::optional<int> breakpointLine;
  static void* allocate(void* user,void* ptr,std::size_t oldSize,std::size_t newSize){
-  auto& m=*static_cast<Memory*>(user);const std::size_t old=ptr?oldSize:0;
+  auto& m=*static_cast<Memory*>(user);const std::size_t old=ptr?std::min(oldSize,m.used):0;
   if(newSize==0){if(ptr)std::free(ptr);m.used=m.used>=old?m.used-old:0;return nullptr;}
   if(newSize>m.limit||m.used-old>m.limit-newSize)return nullptr;
   void* next=std::realloc(ptr,newSize);if(next)m.used=m.used-old+newSize;return next;
