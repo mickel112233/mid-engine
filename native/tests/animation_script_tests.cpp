@@ -22,5 +22,6 @@ int main(){
  auto scaledSkeleton=skinSkeleton;scaledSkeleton.joints[0].scale={2,1,1};auto scaledPose=mid::animation::evaluateWorldPose(scaledSkeleton);check(std::abs(scaledPose.joints[1].position.x-4.0F)<0.01F,"hierarchical pose applies parent scale to child offset");
  mid::animation::Pose poseA=worldPose,poseB=worldPose;poseB.joints[0].position.x=3.0F;auto blended=mid::animation::blendPoses(poseA,poseB,0.5F);check(std::abs(blended.joints[0].position.x-2.0F)<0.01F,"pose blending interpolates joint transforms");
  mid::render::Vertex bindVertex;bindVertex.position={0,0,1};bindVertex.normal={0,0,1};mid::animation::SkinInfluence influence;influence.joints={1,0,0,0};influence.weights={1,0,0,0};auto skinned=mid::animation::skinMesh(skinSkeleton,{bindVertex},{influence});check(std::abs(skinned[0].position.x-2.0F)<0.01F&&std::abs(skinned[0].position.z)<0.01F,"CPU skeletal skinning transforms vertices from bind pose to animated pose");
+ auto scaledSkinSkeleton=skinSkeleton;scaledSkinSkeleton.joints[1].scale={1,1,2};auto offsetVertex=bindVertex;offsetVertex.position={0,0,2};auto scaledSkin=mid::animation::skinMesh(scaledSkinSkeleton,{offsetVertex},{influence});check(std::abs(scaledSkin[0].position.x-3.0F)<0.02F,"CPU skinning applies animated joint scale to vertex offsets");
  if(failures)return 1;std::cout<<"Native animation/script tests passed\n";return 0;
 }
