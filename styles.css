@@ -2,3 +2,11 @@
 .scene-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:2;touch-action:none;cursor:grab}.scene-canvas:active{cursor:grabbing}
 \n.viewport-bottom #render-stats{max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-size:9px;color:#8992a4}\n
 .gizmo-controls{display:flex;gap:5px;margin-top:8px}.gizmo-button{flex:1;border:1px solid #343a46;background:#20242c;border-radius:5px;padding:6px 4px;color:#cbd2df;font-size:10px;font-weight:750}.gizmo-button:hover:not(:disabled){border-color:#7b985f;background:#2a3326}.gizmo-button.axis-x{color:#ee8b92}.gizmo-button.axis-y{color:#9fdb91}.gizmo-button.axis-z{color:#9bb6ff}.gizmo-button:disabled,.top-actions .button:disabled{opacity:.38;cursor:not-allowed}.top-actions .button{white-space:nowrap}
+
+.transform-gizmo{position:absolute;z-index:6;transform:translate(-50%,-50%);display:grid;grid-template-columns:repeat(3,minmax(28px,1fr));gap:3px;padding:5px;border:1px solid #586273;border-radius:7px;background:rgba(17,20,26,.92);box-shadow:0 5px 18px #0008;pointer-events:auto}
+.transform-gizmo button{min-width:28px;border:1px solid #3a414e;border-radius:4px;background:#252a34;color:#dbe1ed;font-size:10px;font-weight:800;padding:5px 6px;cursor:pointer}
+.transform-gizmo button[data-axis="X"]{color:#ff969d;border-color:#68434a}
+.transform-gizmo button[data-axis="Y"]{color:#a9e99a;border-color:#476843}
+.transform-gizmo button[data-axis="Z"]{color:#a8c1ff;border-color:#46577b}
+.transform-gizmo button:hover:not(:disabled){filter:brightness(1.3);border-color:#d1d9e8}
+.transform-gizmo button:disabled{opacity:.4;cursor:not-allowed}
