@@ -133,7 +133,8 @@ void OpenGL33Device::beginFrame(){
   if(queryPending_){Int available=0;gl_.GetQueryObjectiv(gpuQuery_,GL_QUERY_RESULT_AVAILABLE,&available);if(available){UInt64 nanoseconds=0;gl_.GetQueryObjectui64v(gpuQuery_,GL_QUERY_RESULT,&nanoseconds);lastGpuMilliseconds_=static_cast<double>(nanoseconds)/1000000.0;gpuTimingAvailable_=true;queryPending_=false;}}
   if(!queryPending_&&!queryActive_){if(!gpuQuery_)gl_.GenQueries(1,&gpuQuery_);if(gpuQuery_){gl_.BeginQuery(GL_TIME_ELAPSED,gpuQuery_);queryActive_=true;}}
  }
- gl_.BindFramebuffer(GL_FRAMEBUFFER,0);gl_.Viewport(0,0,viewportWidth_,viewportHeight_);gl_.Clear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+ if(gl_.BindFramebuffer)gl_.BindFramebuffer(GL_FRAMEBUFFER,0);
+ gl_.Viewport(0,0,viewportWidth_,viewportHeight_);gl_.Clear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 }
 void OpenGL33Device::registerMesh(ResourceId id,const MeshData& input){
  if(id==0)throw std::invalid_argument("Mesh resource ID cannot be zero");
