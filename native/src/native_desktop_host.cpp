@@ -77,8 +77,23 @@ struct NativeDesktopHost::Impl {
     const int dx=event.motion.x-lastMouseX,dy=event.motion.y-lastMouseY;
     if(std::abs(event.motion.x-mouseDownX)+std::abs(event.motion.y-mouseDownY)>3)mouseMoved=true;
     if(gizmo&&selected!=0&&session->editScene().contains(selected)&&mouseMoved){
-     const double scale=0.01;const double delta=(axis==editor::Axis::X?dx:(axis==editor::Axis::Y?-dy:dx))*scale;
-     try{session->translateAxis(selected,axis,delta);}catch(const std::exception&){gizmo=false;}
+     const auto model=bridge->modelMatrix(session->editScene(),selected);
+     const render::Vec3f worldPosition{model[12],model[13],model[14]};
+     const auto forward=normalized(camera.forward),right=normalized(cross(forward,camera.up));
+     const auto viewUp=normalized(cross(right,forward));
+     const render::Vec3f relative{worldPosition.x-camera.position.x,worldPosition.y-camera.position.y,worldPosition.z-camera.position.z};
+     const float depth=dot(relative,forward);
+     render::Vec3f worldAxis{};if(axis==editor::Axis::X)worldAxis={1,0,0};else if(axis==editor::Axis::Y)worldAxis={0,1,0};else worldAxis={0,0,1};
+     const float focal=static_cast<float>(height)/(2.0F*std::tan(camera.verticalFovRadians*0.5F));
+     const float axisDepth=dot(worldAxis,forward),cameraX=dot(relative,right),cameraY=dot(relative,viewUp);
+     const float safeDepth=std::max(depth,camera.nearPlane);
+     const float projectedX=focal*(dot(worldAxis,right)*safeDepth-cameraX*axisDepth)/(safeDepth*safeDepth);
+     const float projectedY=-focal*(dot(worldAxis,viewUp)*safeDepth-cameraY*axisDepth)/(safeDepth*safeDepth);
+     const float projectedLengthSquared=projectedX*projectedX+projectedY*projectedY;
+     if(depth>camera.nearPlane&&projectedLengthSquared>1.0e-5F){
+      const double delta=(static_cast<float>(dx)*projectedX+static_cast<float>(dy)*projectedY)/projectedLengthSquared;
+      try{session->translateAxis(selected,axis,delta);}catch(const std::exception&){gizmo=false;}
+     }
     }else if(!gizmo&&mouseMoved){
      const float yaw=static_cast<float>(dx)*0.006F,pitch=static_cast<float>(dy)*0.006F;
      const auto forward=normalized(camera.forward),right=normalized(cross(forward,camera.up));
