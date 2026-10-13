@@ -34,8 +34,8 @@ ctest --test-dir build --build-config Release --output-on-failure
 - Basic 3D cube geometry, perspective camera, grid, mouse orbit, and wheel zoom
 - WebGL preview metallic-roughness Cook-Torrance lighting, hemisphere ambient light, optional directional depth-texture shadows, ANGLE GPU instancing, CPU/GPU timer profiling, per-face normals, and reduced redundant geometry uploads
 - Native renderer planning APIs for mesh/material batching, frustum culling, LOD selection, profiling, and deferred resource destruction
-- Async asset cache with LRU memory budget and explicit load failure/eviction states; Wavefront OBJ/MTL import; BMP texture decoding; optional Assimp glTF/GLB/FBX mesh/material/node and position/rotation animation import
-- Native scene-to-renderer bridge and editor frame loop connected to the OpenGL device, transform gizmo operations with undo/redo and isolated play-mode copy, spatial-hash sphere broadphase with plane/box contacts and spring distance joints, hierarchical quaternion pose evaluation/blending and CPU skinning, CCD IK, atomic bounded command VM, optional sandboxed Lua lifecycle runtime, and CPU GGX PBR reference shading
+- Async asset cache with LRU memory budget and explicit load failure/eviction states; Wavefront OBJ/MTL import; BMP and optional PNG texture decoding; optional Assimp glTF/GLB/FBX mesh/material/node and position/rotation animation import
+- Native scene-to-renderer bridge and editor frame loop connected to the OpenGL device, transform gizmo operations with undo/redo and isolated play-mode copy, spatial-hash sphere broadphase with plane/box/capsule contacts, spring distance and rope constraints, hierarchical quaternion pose evaluation/blending and CPU skinning, constrained CCD IK, atomic bounded command VM, optional sandboxed Lua lifecycle runtime, and CPU GGX PBR reference shading
 - Persistent scene/entity model with transforms and JSON serialization
 - Local HTTP API and OpenAPI contract for AI agents to inspect the project and perform allowlisted scene operations
 - Dependency-free MCP stdio adapter for compatible agent clients
@@ -53,12 +53,12 @@ Read [docs/AGENTS.md](docs/AGENTS.md) for the tool contract and safety model. An
 
 ## Roadmap
 
-1. **Foundation (in progress):** project persistence, editor shell, scene/entity operations, agent tool API, native C++20 scene core, and tests.
-2. **Rendering:** native render-device abstraction, GPU backend, materials, lighting, meshes, asset import, camera entities, and scalable rendering paths.
-3. **Interaction:** input mapping, gizmos, selection, undo/redo, play mode.
-4. **Runtime:** scripting sandbox, deterministic update loop, physics integration.
-5. **AI workflows:** MCP adapter, provider-agnostic agent bridge, task plans, checkpoints, and artifact verification.
-6. **Desktop:** package the editor in a native desktop shell; keep the web preview usable independently.
-7. **Production:** project migration, plugin API, profiling, builds, export targets, security review.
+1. **Foundation (in progress):** project persistence, scene/entity operations, agent tool API, native C++20 core, and regression tests.
+2. **Rendering (in progress):** native OpenGL 3.3 device, GPU instancing, material texture binding, PBR shading, optional directional shadow maps, and GPU timing are implemented; production import/color-space coverage and backend integration with a desktop host remain.
+3. **Interaction (in progress):** native axis/plane transform operations, snapshot undo/redo, a native editor frame loop, browser undo/redo controls, and an isolated play preview are implemented; viewport drag gizmos and complete input/selection integration remain.
+4. **Runtime (in progress):** optional sandboxed Lua start/update/stop callbacks, instruction/memory budgets, line breakpoints, sphere/plane/box/capsule physics, distance/rope constraints, skeletal pose blending/skinning, and constrained CCD IK are implemented; a full deterministic gameplay runtime, production rigid-body solver, animation graph, and step/resume debugger remain.
+5. **AI workflows:** MCP adapter, allowlisted tools, task plans, checkpoints, and artifact verification.
+6. **Desktop:** provide a native window/context host and package the editor while retaining the web preview.
+7. **Production:** project migration, plugin API, broad platform tests, export targets, and security review.
 
 Contributions should preserve the no-surprise rule: tool calls return structured results, filesystem access stays inside the project root, and risky actions require explicit approval.
