@@ -10,6 +10,7 @@ int main(){
  }
  mid::Scene scene("Lua test");const auto id=scene.createEntity("actor");
  mid::script::LuaScriptInstance script("function start() set_position(1,1,2,3); log('started') end\nfunction update(dt) set_position(1,1+dt,2,3) end\nfunction stop() set_active(1,false) end");
+ script.setBreakpoints({1});auto breakpoint=script.start(scene);check(!breakpoint.completed&&breakpoint.breakpointLine==1&&scene.get(id).transform.position.x==0.0,"Lua line breakpoint interrupts callback before committing scene changes");script.setBreakpoints({});
  auto started=script.start(scene);check(started.completed&&scene.get(id).transform.position.x==1.0,"Lua start callback mutates scene through safe API");
  check(!started.logs.empty(),"Lua log callback captures script messages");
  auto updated=script.update(scene,0.5F);check(updated.completed&&scene.get(id).transform.position.x==1.5,"Lua update callback receives delta time");
