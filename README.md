@@ -32,10 +32,10 @@ ctest --test-dir build --build-config Release --output-on-failure
 
 - Editor layout with scene tree, interactive WebGL viewport, inspector, asset list, and agent command panel
 - Basic 3D cube geometry, perspective camera, grid, mouse orbit, and wheel zoom
-- WebGL preview metallic-roughness Cook-Torrance lighting with per-face normals and reduced redundant geometry uploads
+- WebGL preview metallic-roughness Cook-Torrance lighting, hemisphere ambient light, optional directional depth-texture shadows, ANGLE GPU instancing, CPU/GPU timer profiling, per-face normals, and reduced redundant geometry uploads
 - Native renderer planning APIs for mesh/material batching, frustum culling, LOD selection, profiling, and deferred resource destruction
-- Async asset cache with LRU memory budget, explicit load failure/eviction states, plus Wavefront OBJ geometry and MTL material importers
-- Native scene-to-renderer bridge, spatial-hash physics broadphase and plane contacts, position/rotation keyframe animation, CCD IK, atomic bounded script VM, and CPU GGX PBR reference shading
+- Async asset cache with LRU memory budget and explicit load failure/eviction states; Wavefront OBJ/MTL import; BMP texture decoding; optional Assimp glTF/GLB/FBX mesh/material import
+- Native scene-to-renderer bridge, transform gizmo operations with undo/redo and isolated play-mode copy, spatial-hash sphere broadphase with plane/box contacts and spring distance joints, hierarchical quaternion pose evaluation/blending and CPU skinning, CCD IK, atomic bounded command VM, optional sandboxed Lua lifecycle runtime, and CPU GGX PBR reference shading
 - Persistent scene/entity model with transforms and JSON serialization
 - Local HTTP API and OpenAPI contract for AI agents to inspect the project and perform allowlisted scene operations
 - Dependency-free MCP stdio adapter for compatible agent clients
@@ -45,7 +45,7 @@ ctest --test-dir build --build-config Release --output-on-failure
 
 ## Native C++ core
 
-The native engine foundation is built with C++20 and CMake. The native slices provide stable entity IDs, transforms, a cycle-safe parent/child hierarchy, deterministic serialization, render planning/resource lifetime contracts, async asset caching, editor scene snapshots, simple rigid-body physics, keyframe animation/CCD IK, a bounded data-only script VM, and regression tests. The native render-device contract remains backend-neutral; the browser viewport uses a concrete WebGL preview renderer, while a dedicated native GPU backend, full shadow/environment-lighting pipeline, and production model/texture import remain future work. See [native/README.md](native/README.md). GitHub Actions builds and tests this target alongside the existing JavaScript checks.
+The native engine foundation is built with C++20 and CMake. The native slices provide stable entity IDs, transforms, a cycle-safe parent/child hierarchy, deterministic serialization, render planning/resource lifetime contracts, async asset caching, editor scene snapshots, simple rigid-body physics, keyframe animation/CCD IK, a bounded data-only script VM, and regression tests. The browser viewport now uses a concrete WebGL preview renderer with optional shadow maps, instancing, and GPU timing. The native C++ render-device interface is still backend-neutral; a dedicated native GPU backend and production-grade texture decoding/binding, complete glTF/FBX scene/animation import, full rigid-body/joint solver, rotation-limited IK, and a step/resume script debugger remain future work. Optional Assimp and Lua support require their development packages at configure time. See [native/README.md](native/README.md). GitHub Actions builds and tests this target alongside the existing JavaScript checks.
 
 ## Agent integration
 
