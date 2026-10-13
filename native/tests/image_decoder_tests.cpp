@@ -1,5 +1,7 @@
 #include "mid/image_decoder.hpp"
-#include <iostream>\n#include <cmath>\n#include <string>
+#include <iostream>
+#include <cmath>
+#include <string>
 #include <vector>
 int main(){
  int failures=0;auto check=[&](bool ok,const char* msg){if(!ok){std::cerr<<"FAIL: "<<msg<<'\n';++failures;}};
