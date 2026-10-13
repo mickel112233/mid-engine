@@ -1,5 +1,5 @@
 #include "mid/image_decoder.hpp"
-#include <iostream>
+#include <iostream>\n#include <cmath>\n#include <string>
 #include <vector>
 int main(){
  int failures=0;auto check=[&](bool ok,const char* msg){if(!ok){std::cerr<<"FAIL: "<<msg<<'\n';++failures;}};
@@ -14,6 +14,17 @@ int main(){
   std::vector<std::byte> png;for(unsigned char b:rawPng)png.push_back(static_cast<std::byte>(b));
   const auto decoded=mid::assets::decodeImage(png);check(decoded.width==1&&decoded.height==1&&decoded.pixels.size()==4&&decoded.pixels[0]==255&&decoded.pixels[1]==0&&decoded.pixels[2]==0&&decoded.pixels[3]==255,"optional PNG decoder outputs RGBA pixels");
  }
+ std::string hdrText="#?RADIANCE\\nFORMAT=32-bit_rle_rgbe\\n\\n-Y 1 +X 1\\n";
+ std::vector<std::byte> hdr;for(unsigned char ch:hdrText)hdr.push_back(static_cast<std::byte>(ch));
+ hdr.push_back(std::byte{128});hdr.push_back(std::byte{64});hdr.push_back(std::byte{32});hdr.push_back(std::byte{129});
+ const auto hdrImage=mid::assets::decodeHdr(hdr);
+ check(hdrImage.width==1&&hdrImage.height==1&&hdrImage.pixels.size()==4,"Radiance HDR dimensions and float RGBA buffer decode");
+ check(std::abs(hdrImage.pixels[0]-1.0F)<0.0001F&&std::abs(hdrImage.pixels[1]-0.5F)<0.0001F&&std::abs(hdrImage.pixels[2]-0.25F)<0.0001F,"Radiance HDR preserves linear RGBE radiance");
+ const auto hdrPreview=mid::assets::decodeImage(hdr);
+ check(hdrPreview.width==1&&hdrPreview.pixels.size()==4&&hdrPreview.pixels[3]==255,"generic image dispatcher tone-maps HDR to opaque RGBA8");
+ check(mid::assets::hasHdrSupport(),"Radiance HDR decoder is always available");
+ bool malformedHdrRejected=false;try{(void)mid::assets::decodeHdr(std::span<const std::byte>{});}catch(const std::invalid_argument&){malformedHdrRejected=true;}
+ check(malformedHdrRejected,"invalid HDR input is rejected safely");
  std::vector<std::byte> invalidPng(8);invalidPng[0]=std::byte{137};invalidPng[1]=std::byte{80};invalidPng[2]=std::byte{78};invalidPng[3]=std::byte{71};invalidPng[4]=std::byte{13};invalidPng[5]=std::byte{10};invalidPng[6]=std::byte{26};invalidPng[7]=std::byte{10};bool pngRejected=false;try{(void)mid::assets::decodeImage(invalidPng);}catch(const std::exception&){pngRejected=true;}check(pngRejected,"truncated PNG input is rejected safely");
  return failures?1:0;
 }
