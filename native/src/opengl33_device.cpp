@@ -15,8 +15,6 @@ constexpr Enum GL_TEXTURE_MIN_FILTER=0x2801,GL_TEXTURE_MAG_FILTER=0x2800,GL_TEXT
 constexpr Enum GL_VERTEX_SHADER=0x8B31,GL_FRAGMENT_SHADER=0x8B30,GL_COMPILE_STATUS=0x8B81,GL_LINK_STATUS=0x8B82,GL_INFO_LOG_LENGTH=0x8B84;
 constexpr Enum GL_DEPTH_TEST=0x0B71,GL_LEQUAL=0x0203,GL_COLOR_BUFFER_BIT=0x00004000,GL_DEPTH_BUFFER_BIT=0x00000100,GL_TEXTURE0=0x84C0;
 struct V3 {float x,y,z;};
-V3 add(V3 a,V3 b){return {a.x+b.x,a.y+b.y,a.z+b.z};}
-V3 sub(V3 a,V3 b){return {a.x-b.x,a.y-b.y,a.z-b.z};}
 V3 mul(V3 a,float s){return {a.x*s,a.y*s,a.z*s};}
 float dot(V3 a,V3 b){return a.x*b.x+a.y*b.y+a.z*b.z;}
 V3 cross(V3 a,V3 b){return {a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x};}
@@ -47,7 +45,7 @@ uniform vec4 uBaseColor; uniform vec3 uLightDirection; uniform vec3 uCameraPosit
 out vec4 outColor;
 void main(){vec4 base=uBaseColor*vColor;if(uHasTexture==1)base*=texture(uBaseColorTexture,vUv);vec3 N=normalize(vNormal),V=normalize(uCameraPosition-vWorldPosition),L=normalize(-uLightDirection),H=normalize(V+L);float nl=max(dot(N,L),0.0),nv=max(dot(N,V),0.001),nh=max(dot(N,H),0.0),vh=max(dot(V,H),0.0);float r=clamp(uRoughness,0.05,1.0),a=r*r,a2=a*a,d=nh*nh*(a2-1.0)+1.0;float D=a2/max(3.14159265*d*d,0.001),k=(r+1.0)*(r+1.0)/8.0,G=(nv/(nv*(1.0-k)+k))*(nl/(nl*(1.0-k)+k));vec3 f0=mix(vec3(0.04),base.rgb,uMetallic),F=f0+(1.0-f0)*pow(1.0-vh,5.0);vec3 spec=D*G*F/max(4.0*nv*max(nl,0.001),0.001),diff=(1.0-F)*(1.0-uMetallic)*base.rgb/3.14159265;vec3 hemi=mix(vec3(0.07,0.06,0.05),vec3(0.25,0.34,0.48),clamp(N.y*0.5+0.5,0.0,1.0));outColor=vec4(base.rgb*hemi*0.35+(diff+spec)*nl,base.a);})";
 bool allFunctions(const Functions& g){
- return g.GenBuffers&&g.DeleteBuffers&&g.BindBuffer&&g.BufferData&&g.GenVertexArrays&&g.DeleteVertexArrays&&g.BindVertexArray&&g.EnableVertexAttribArray&&g.VertexAttribPointer&&g.VertexAttribDivisor&&g.CreateShader&&g.ShaderSource&&g.CompileShader&&g.GetShaderiv&&g.GetShaderInfoLog&&g.DeleteShader&&g.CreateProgram&&g.AttachShader&&g.LinkProgram&&g.GetProgramiv&&g.GetProgramInfoLog&&g.DeleteProgram&&g.UseProgram&&g.GetUniformLocation&&g.UniformMatrix4fv&&g.Uniform3f&&g.Uniform4f&&g.Uniform1f&&g.Uniform1i&&g.DrawElementsInstanced&&g.DrawElements&&g.Enable&&g.DepthFunc&&g.Clear&&g.ClearColor&&g.GenTextures&&g.DeleteTextures&&g.BindTexture&&g.TexImage2D&&g.TexParameteri&&g.ActiveTexture;
+ return g.GenBuffers&&g.DeleteBuffers&&g.BindBuffer&&g.BufferData&&g.GenVertexArrays&&g.DeleteVertexArrays&&g.BindVertexArray&&g.EnableVertexAttribArray&&g.DisableVertexAttribArray&&g.VertexAttribPointer&&g.VertexAttribDivisor&&g.CreateShader&&g.ShaderSource&&g.CompileShader&&g.GetShaderiv&&g.GetShaderInfoLog&&g.DeleteShader&&g.CreateProgram&&g.AttachShader&&g.LinkProgram&&g.GetProgramiv&&g.GetProgramInfoLog&&g.DeleteProgram&&g.UseProgram&&g.GetUniformLocation&&g.UniformMatrix4fv&&g.Uniform3f&&g.Uniform4f&&g.Uniform1f&&g.Uniform1i&&g.DrawElementsInstanced&&g.DrawElements&&g.Enable&&g.DepthFunc&&g.Clear&&g.ClearColor&&g.GenTextures&&g.DeleteTextures&&g.BindTexture&&g.TexImage2D&&g.TexParameteri&&g.ActiveTexture;
 }
 }
 OpenGL33Device::OpenGL33Device(Functions functions):gl_(functions){
@@ -85,7 +83,8 @@ void OpenGL33Device::destroyResource(ResourceHandle h)noexcept{
 }
 void OpenGL33Device::beginFrame(){stats_={};gl_.Clear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);}
 void OpenGL33Device::registerMesh(ResourceId id,const MeshData& input){
- if(id==0)throw std::invalid_argument("Mesh resource ID cannot be zero");input.validate();
+ if(id==0)throw std::invalid_argument("Mesh resource ID cannot be zero");
+ input.validate();
  if(input.vertices.size()>static_cast<std::size_t>(std::numeric_limits<Sizeiptr>::max())/sizeof(Vertex))throw std::length_error("Mesh vertex data is too large");
  std::vector<std::uint32_t> generated;const auto* indices=&input.indices;if(indices->empty()){generated.resize(input.vertices.size());for(std::size_t i=0;i<generated.size();++i)generated[i]=static_cast<std::uint32_t>(i);indices=&generated;}
  if(indices->size()>static_cast<std::size_t>(std::numeric_limits<Sizei>::max()))throw std::length_error("Mesh index count is too large");
@@ -118,7 +117,8 @@ void OpenGL33Device::submit(const RenderPlan& plan,const Camera& camera,const Di
    gl_.Uniform4f(uniform("uBaseColor"),mat.value.baseColor.x,mat.value.baseColor.y,mat.value.baseColor.z,mat.value.baseColor.w);gl_.Uniform1f(uniform("uMetallic"),mat.value.metallic);gl_.Uniform1f(uniform("uRoughness"),mat.value.roughness);
    const auto texture=resources_.find(mat.texture);const bool hasTexture=mat.texture!=0&&texture!=resources_.end()&&texture->second.kind==ResourceKind::Texture;gl_.Uniform1i(uniform("uHasTexture"),hasTexture?1:0);if(hasTexture){gl_.ActiveTexture(GL_TEXTURE0);gl_.BindTexture(GL_TEXTURE_2D,texture->second.handle);}
    std::vector<std::array<float,16>> instances;instances.reserve(batch.entityIds.size());for(auto entity:batch.entityIds){const auto tr=transforms_.find(entity);if(tr!=transforms_.end())instances.push_back(tr->second);}
-   if(instances.empty())continue;gl_.BindVertexArray(mesh.vao);
+   if(instances.empty())continue;
+   gl_.BindVertexArray(mesh.vao);
    if(instances.size()>1){std::vector<float> data;data.reserve(instances.size()*16);for(const auto& m:instances)data.insert(data.end(),m.begin(),m.end());gl_.BindBuffer(GL_ARRAY_BUFFER,mesh.instanceBuffer);gl_.BufferData(GL_ARRAY_BUFFER,static_cast<Sizeiptr>(data.size()*sizeof(float)),data.data(),GL_DYNAMIC_DRAW);
     for(UInt column=0;column<4;++column){const UInt loc=4+column;gl_.EnableVertexAttribArray(loc);gl_.VertexAttribPointer(loc,4,GL_FLOAT,0,16*static_cast<Sizei>(sizeof(float)),reinterpret_cast<const void*>(static_cast<std::uintptr_t>(column*4*sizeof(float))));gl_.VertexAttribDivisor(loc,1);}
     gl_.Uniform1i(uniform("uInstanced"),1);gl_.DrawElementsInstanced(GL_TRIANGLES,mesh.indexCount,GL_UNSIGNED_INT,nullptr,static_cast<Sizei>(instances.size()));
