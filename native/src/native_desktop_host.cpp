@@ -108,7 +108,7 @@ void NativeDesktopHost::registerRenderable(EntityId entity,render::ResourceId me
  impl_->device->registerMesh(meshId,mesh);impl_->device->registerMaterial(materialId,material);(*impl_->materials)[materialId]=material;
  impl_->bridge->setRenderComponents(entity,{meshId,materialId,bounds,true,{}});
 }
-void NativeDesktopHost::registerTexture(render::ResourceId textureId,render::ResourceId materialId,const ImageRgba8& image){
+void NativeDesktopHost::registerTexture(render::ResourceId textureId,render::ResourceId materialId,const assets::ImageRgba8& image){
  if(image.width==0||image.height==0||image.pixels.size()!=static_cast<std::size_t>(image.width)*image.height*4U)throw std::invalid_argument("Texture must contain tightly packed RGBA8 pixels");
  impl_->device->uploadRgba8(textureId,image.width,image.height,image.pixels.data(),image.pixels.size());impl_->device->bindBaseColorTexture(materialId,textureId);
 }
