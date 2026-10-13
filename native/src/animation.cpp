@@ -26,7 +26,7 @@ Vec3f sample(const std::vector<Vec3Key>& keys,float t){
 }
 void Skeleton::validate() const {
     for(std::size_t i=0;i<joints.size();++i){const auto& j=joints[i];if(j.parent>=static_cast<std::int32_t>(joints.size())||j.parent==static_cast<std::int32_t>(i)||j.parent< -1)throw std::invalid_argument("Skeleton joint parent index is invalid");
-        if(!std::isfinite(j.bindPosition.x)||!std::isfinite(j.bindPosition.y)||!std::isfinite(j.bindPosition.z))throw std::invalid_argument("Skeleton joint position must be finite");
+        if(!std::isfinite(j.bindPosition.x)||!std::isfinite(j.bindPosition.y)||!std::isfinite(j.bindPosition.z)||!std::isfinite(j.bindRotationDegrees.x)||!std::isfinite(j.bindRotationDegrees.y)||!std::isfinite(j.bindRotationDegrees.z))throw std::invalid_argument("Skeleton bind pose must be finite");
         std::int32_t p=j.parent;std::size_t hops=0;while(p>=0){if(++hops>joints.size())throw std::invalid_argument("Skeleton hierarchy contains a cycle");p=joints[static_cast<std::size_t>(p)].parent;}
     }
 }
@@ -37,7 +37,7 @@ void Clip::validate(const Skeleton& skeleton) const {
 }
 Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}}
 void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;}
-void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints)j.position=j.bindPosition;}
+void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}}
 void Animator::update(float delta){
     if(!std::isfinite(delta)||delta<0)throw std::invalid_argument("Animation delta must be finite and non-negative");
     if(!clip_)return;time_+=delta;
