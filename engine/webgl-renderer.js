@@ -102,15 +102,15 @@ function createGridVertices() {
   }
   return new Float32Array(values);
 }
-function bindGeometry(gl,buffer,vertices,positionLocation,colorLocation) {
+function bindGeometry(gl,buffer,vertices,positionLocation,colorLocation,normalLocation) {
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.enableVertexAttribArray(positionLocation);
   gl.vertexAttribPointer(positionLocation,3,gl.FLOAT,false,36,0);
   gl.enableVertexAttribArray(colorLocation);
   gl.vertexAttribPointer(colorLocation,3,gl.FLOAT,false,36,12);
-  gl.enableVertexAttribArray(2);
-  gl.vertexAttribPointer(2,3,gl.FLOAT,false,36,24);
+  gl.enableVertexAttribArray(normalLocation);
+  gl.vertexAttribPointer(normalLocation,3,gl.FLOAT,false,36,24);
 }
 export function createWebGLRenderer(canvas) {
   const gl=canvas.getContext("webgl",{alpha:false,antialias:true});
@@ -154,11 +154,11 @@ export function createWebGLRenderer(canvas) {
     gl.uniform3fv(locations.tint,[1,1,1]);
     gl.uniform3fv(locations.lightDirection,[-0.45,-1.0,-0.3]);
     gl.uniform1f(locations.ambient,0.32);
-    bindGeometry(gl,gridBuffer,gridVertices,locations.position,locations.color);
+    bindGeometry(gl,gridBuffer,gridVertices,locations.position,locations.color,locations.normal);
     gl.disable(gl.CULL_FACE);
-    gl.drawArrays(gl.LINES,0,gridVertices.length/6);
+    gl.drawArrays(gl.LINES,0,gridVertices.length/9);
     gl.enable(gl.CULL_FACE);
-    bindGeometry(gl,cubeBuffer,CUBE_VERTICES,locations.position,locations.color);
+    bindGeometry(gl,cubeBuffer,CUBE_VERTICES,locations.position,locations.color,locations.normal);
     for(const entity of (scene?.entities||[])){
       if(entity.enabled===false)continue;
       gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
