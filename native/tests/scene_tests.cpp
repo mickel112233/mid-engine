@@ -58,7 +58,8 @@ void hierarchySafety() {
     scene.setParent(grandchild, std::nullopt);
     check(!scene.get(grandchild).parent.has_value(), "entity can be detached");
     check(scene.get(child).children.empty(), "detaching updates old parent");
-    check(!scene.setParent(child, std::nullopt), "placeholder");
+    scene.setParent(child, std::nullopt);
+    check(!scene.get(child).parent.has_value(), "root remains detached when clearing parent");
 }
 
 void entityLifetimeAndValidation() {
