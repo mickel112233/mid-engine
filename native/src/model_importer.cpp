@@ -43,7 +43,7 @@ ImportedModel importModelFile(const std::filesystem::path& path) {
  ImportedModel out; out.meshes.reserve(scene->mNumMeshes); out.materials.reserve(scene->mNumMaterials);
  out.embeddedTextures.reserve(scene->mNumTextures);
  for(unsigned int i=0;i<scene->mNumTextures;++i){
-  const aiTexture* source=scene->mTextures[i]; if(!source)continue;
+  const aiTexture* source=scene->mTextures[i]; if(!source){out.embeddedTextures.emplace_back();continue;}
   ImportedTexture texture; texture.name=source->mFilename.length?source->mFilename.C_Str():"*"+std::to_string(i);
   texture.formatHint=source->achFormatHint; texture.width=source->mWidth; texture.height=source->mHeight;
   texture.compressed=source->mHeight==0;
