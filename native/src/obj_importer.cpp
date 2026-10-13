@@ -8,6 +8,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <utility>
 namespace mid::assets {
 namespace {
 struct Key {int p;int t;int n;bool operator==(const Key&)const=default;};
@@ -54,7 +55,7 @@ render::MeshData importObj(std::string_view source,std::string name){
  }
  if(mesh.vertices.empty()||mesh.indices.empty())throw std::invalid_argument("OBJ contains no renderable faces");
  // Generate face normals for vertices whose source normal was omitted, accumulating shared corners.
- std::vector<render::Vec3f> generated(mesh.vertices.size(),{0,0,0});
+ std::vector<render::Vec3f> generated(mesh.vertices.size(),render::Vec3f{0.0F,0.0F,0.0F});
  for(std::size_t i=0;i<mesh.indices.size();i+=3){const auto ia=mesh.indices[i],ib=mesh.indices[i+1],ic=mesh.indices[i+2];const auto n=cross(sub(mesh.vertices[ib].position,mesh.vertices[ia].position),sub(mesh.vertices[ic].position,mesh.vertices[ia].position));for(auto id:{ia,ib,ic})if(length(mesh.vertices[id].normal)<1e-7F)generated[id]={generated[id].x+n.x,generated[id].y+n.y,generated[id].z+n.z};}
  for(std::size_t i=0;i<mesh.vertices.size();++i){if(length(mesh.vertices[i].normal)<1e-7F)mesh.vertices[i].normal=normalize(generated[i]);}
  render::Vec3f center{};for(const auto& v:mesh.vertices){center.x+=v.position.x;center.y+=v.position.y;center.z+=v.position.z;}
