@@ -33,17 +33,17 @@ void Skeleton::validate() const {
 void Clip::validate(const Skeleton& skeleton) const {
     if(!std::isfinite(duration)||duration<0)throw std::invalid_argument("Animation duration is invalid");
     for(const auto& track:tracks){if(track.joint>=skeleton.joints.size())throw std::invalid_argument("Animation track joint is out of range");float previous=-1;
-        for(const auto& key:track.positions){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation keyframe is invalid or unsorted");previous=key.time;}}
+        for(const auto& key:track.positions){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation keyframe is invalid or unsorted");previous=key.time;} previous=-1; for(const auto& key:track.rotations){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation rotation keyframe is invalid or unsorted");previous=key.time;}}
 }
-Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints)j.position=j.bindPosition;}
+Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}}
 void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;}
 void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints)j.position=j.bindPosition;}
 void Animator::update(float delta){
     if(!std::isfinite(delta)||delta<0)throw std::invalid_argument("Animation delta must be finite and non-negative");
     if(!clip_)return;time_+=delta;
     if(clip_->duration>0){if(looping_)time_=std::fmod(time_,clip_->duration);else time_=std::min(time_,clip_->duration);}
-    for(auto& j:skeleton_.joints)j.position=j.bindPosition;
-    for(const auto& track:clip_->tracks)if(!track.positions.empty())skeleton_.joints[track.joint].position=sample(track.positions,time_);
+    for(auto& j:skeleton_.joints){j.position=j.bindPosition;j.rotationDegrees=j.bindRotationDegrees;}
+    for(const auto& track:clip_->tracks){if(!track.positions.empty())skeleton_.joints[track.joint].position=sample(track.positions,time_);if(!track.rotations.empty())skeleton_.joints[track.joint].rotationDegrees=sample(track.rotations,time_);}
 }
 const Skeleton& Animator::skeleton()const noexcept{return skeleton_;}
 float Animator::time()const noexcept{return time_;}
