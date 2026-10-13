@@ -40,3 +40,16 @@ These are production-oriented interfaces and testable foundations, not a complet
 
 
 Additional native modules: `mid/pbr.hpp` provides a CPU Cook-Torrance/GGX shading reference, and `mid/mtl_importer.hpp` imports Wavefront MTL diffuse colors, opacity, shininess-derived roughness, and base-color texture references. The physics world now uses a spatial-hash broadphase with candidate/test counters and supports static plane colliders. Animation clips sample both position and Euler rotation tracks; script execution stages scene changes and commits only when the program completes successfully.
+
+
+## Expanded systems (experimental, build-tested on CI where noted)
+
+- `mid/editor_session.hpp`: constrained axis/plane transform edits, scene-snapshot undo/redo, and an isolated play-mode copy.
+- `mid/physics.hpp`: spatial-hash sphere broadphase, static plane/axis-aligned box colliders, and spring-damper distance joints. This is not a full rigid-body solver; angular dynamics, convex collision, hinge/fixed joints, and robust manifold solving remain future work.
+- `mid/animation.hpp`: hierarchical quaternion world-pose evaluation, quaternion pose blending, CPU vertex skinning, keyframe position/rotation sampling, and CCD IK. Rotation-limit-aware IK and a full animation graph remain future work.
+- `mid/image_decoder.hpp`: bounds-checked uncompressed 24/32-bit BMP decoding to RGBA8. PNG/JPEG/HDR decoding and GPU texture binding are not yet provided by this decoder.
+- `mid/model_importer.hpp`: optional Assimp-backed mesh/material extraction for formats enabled in the installed Assimp build, including glTF/GLB and FBX. Install Assimp development files and reconfigure CMake to enable it; embedded texture extraction and complete node/animation import are still incomplete.
+- `mid/lua_runtime.hpp`: optional Lua script instances with start/update/stop callbacks, bounded memory and instruction counts, a restricted global environment, scene mutation functions, log capture, and line breakpoints. Lua is enabled only when CMake finds its development package; this is not a process-level security boundary or a full step/resume debugger.
+- The WebGL editor viewport supports ANGLE instanced draws where available, optional depth-texture directional shadows, hemisphere ambient lighting, and asynchronous GPU timer-query profiling. These are viewport features; they do not yet constitute a native C++ GPU backend.
+
+For a reproducible verification, use the current GitHub Actions run linked from the repository's Actions tab. Do not assume every optional dependency is present on every platform.
