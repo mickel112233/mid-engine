@@ -72,7 +72,7 @@ struct NativeDesktopHost::Impl {
    else if(event.type==SDL_MOUSEBUTTONDOWN&&event.button.button==SDL_BUTTON_LEFT){
     mouseHeld=true;mouseMoved=false;mouseDownX=lastMouseX=event.button.x;mouseDownY=lastMouseY=event.button.y;
    }else if(event.type==SDL_MOUSEBUTTONUP&&event.button.button==SDL_BUTTON_LEFT){
-    mouseHeld=false;if(!mouseMoved&&!gizmo)selected=pickEntity(event.button.x,event.button.y);
+    mouseHeld=false;if(!mouseMoved)selected=pickEntity(event.button.x,event.button.y);
    }else if(event.type==SDL_MOUSEMOTION&&mouseHeld){
     const int dx=event.motion.x-lastMouseX,dy=event.motion.y-lastMouseY;
     if(std::abs(event.motion.x-mouseDownX)+std::abs(event.motion.y-mouseDownY)>3)mouseMoved=true;
