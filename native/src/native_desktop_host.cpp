@@ -5,6 +5,7 @@
 #include <cmath>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 namespace mid::platform {
@@ -38,7 +39,8 @@ struct NativeDesktopHost::Impl {
  SDL_Window* window{nullptr};SDL_GLContext context{nullptr};
  std::unique_ptr<render::gl33::OpenGL33Device> device;
  std::unique_ptr<editor::NativeEditorRuntime> runtime;
- render::Camera camera;bool close{false},gizmo{false},mouseHeld{false};EntityId selected{0};
+ render::Camera camera;bool close{false},gizmo{false},mouseHeld{false},mouseMoved{false};EntityId selected{0};
+ int mouseDownX{0},mouseDownY{0},lastMouseX{0},lastMouseY{0};
  editor::Axis axis{editor::Axis::X};int width{1280},height{720};
  Impl(editor::EditorSession& s,editor::SceneRenderBridge& b,std::unordered_map<render::ResourceId,render::Material>& m,
       render::Camera c,render::DirectionalLight light,const DesktopHostConfig& config)
@@ -67,11 +69,22 @@ struct NativeDesktopHost::Impl {
   while(SDL_PollEvent(&event)){
    if(event.type==SDL_QUIT)close=true;
    else if(event.type==SDL_WINDOWEVENT&&event.window.event==SDL_WINDOWEVENT_SIZE_CHANGED)resize();
-   else if(event.type==SDL_MOUSEBUTTONDOWN&&event.button.button==SDL_BUTTON_LEFT)mouseHeld=true;
-   else if(event.type==SDL_MOUSEBUTTONUP&&event.button.button==SDL_BUTTON_LEFT)mouseHeld=false;
-   else if(event.type==SDL_MOUSEMOTION&&mouseHeld&&gizmo&&selected!=0&&session->editScene().contains(selected)){
-    const double scale=0.01;const double delta=(axis==editor::Axis::X?event.motion.xrel:(axis==editor::Axis::Y?-event.motion.yrel:event.motion.xrel))*scale;
-    try{session->translateAxis(selected,axis,delta);}catch(const std::exception&){gizmo=false;}
+   else if(event.type==SDL_MOUSEBUTTONDOWN&&event.button.button==SDL_BUTTON_LEFT){
+    mouseHeld=true;mouseMoved=false;mouseDownX=lastMouseX=event.button.x;mouseDownY=lastMouseY=event.button.y;
+   }else if(event.type==SDL_MOUSEBUTTONUP&&event.button.button==SDL_BUTTON_LEFT){
+    mouseHeld=false;if(!mouseMoved&&!gizmo)selected=pickEntity(event.button.x,event.button.y);
+   }else if(event.type==SDL_MOUSEMOTION&&mouseHeld){
+    const int dx=event.motion.x-lastMouseX,dy=event.motion.y-lastMouseY;
+    if(std::abs(event.motion.x-mouseDownX)+std::abs(event.motion.y-mouseDownY)>3)mouseMoved=true;
+    if(gizmo&&selected!=0&&session->editScene().contains(selected)&&mouseMoved){
+     const double scale=0.01;const double delta=(axis==editor::Axis::X?dx:(axis==editor::Axis::Y?-dy:dx))*scale;
+     try{session->translateAxis(selected,axis,delta);}catch(const std::exception&){gizmo=false;}
+    }else if(!gizmo&&mouseMoved){
+     const float yaw=static_cast<float>(dx)*0.006F,pitch=static_cast<float>(dy)*0.006F;
+     const auto forward=normalized(camera.forward),right=normalized(cross(forward,camera.up));
+     camera.forward=normalized(add(add(mul(forward,std::cos(yaw)*std::cos(pitch)),mul(right,std::sin(yaw)*std::cos(pitch))),mul(camera.up,std::sin(pitch))));
+    }
+    lastMouseX=event.motion.x;lastMouseY=event.motion.y;
    }else if(event.type==SDL_KEYDOWN&&!event.key.repeat){
     const auto key=event.key.keysym.sym;const bool control=(event.key.keysym.mod&KMOD_CTRL)!=0;
     if(key==SDLK_ESCAPE)close=true;
@@ -85,6 +98,25 @@ struct NativeDesktopHost::Impl {
    }
   }
   return !close;
+ }
+ EntityId pickEntity(int mouseX,int mouseY){
+  const Scene* runtimeScene=session->runtimeScene();const auto& scene=(session->playing()&&runtimeScene)?*runtimeScene:session->editScene();
+  const float nx=(2.0F*static_cast<float>(mouseX)/static_cast<float>(std::max(1,width)))-1.0F;
+  const float ny=1.0F-(2.0F*static_cast<float>(mouseY)/static_cast<float>(std::max(1,height)));
+  const float tanHalf=std::tan(camera.verticalFovRadians*0.5F);
+  const auto forward=normalized(camera.forward),right=normalized(cross(forward,camera.up)),up=normalized(cross(right,forward));
+  const auto ray=normalized(add(add(forward,mul(right,nx*tanHalf*camera.aspectRatio)),mul(up,ny*tanHalf)));
+  float nearest=std::numeric_limits<float>::max();EntityId result=0;
+  for(const auto& entity:scene.entities()){
+   if(!entity.active)continue;
+   render::Vec3f center{static_cast<float>(entity.transform.position.x),static_cast<float>(entity.transform.position.y),static_cast<float>(entity.transform.position.z)};
+   const float radius=std::max({std::abs(static_cast<float>(entity.transform.scale.x)),std::abs(static_cast<float>(entity.transform.scale.y)),std::abs(static_cast<float>(entity.transform.scale.z)),0.15F});
+   const auto delta=render::Vec3f{center.x-camera.position.x,center.y-camera.position.y,center.z-camera.position.z};
+   const float along=dot(delta,ray);if(along<camera.nearPlane||along>camera.farPlane)continue;
+   const auto closest=add(camera.position,mul(ray,along));const auto miss=render::Vec3f{center.x-closest.x,center.y-closest.y,center.z-closest.z};
+   if(dot(miss,miss)<=radius*radius&&along<nearest){nearest=along;result=entity.id;}
+  }
+  return result;
  }
  render::RenderStats draw(float elapsed){
   const auto* keys=SDL_GetKeyboardState(nullptr);const float dt=std::clamp(elapsed,0.0F,0.1F),speed=4.0F*dt;
