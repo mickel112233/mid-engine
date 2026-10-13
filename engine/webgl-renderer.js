@@ -102,9 +102,12 @@ function createGridVertices() {
   }
   return new Float32Array(values);
 }
-function bindGeometry(gl,buffer,vertices,positionLocation,colorLocation,normalLocation) {
+function uploadGeometry(gl,buffer,vertices) {
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+}
+function bindGeometry(gl,buffer,positionLocation,colorLocation,normalLocation) {
+  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.enableVertexAttribArray(positionLocation);
   gl.vertexAttribPointer(positionLocation,3,gl.FLOAT,false,36,0);
   gl.enableVertexAttribArray(colorLocation);
@@ -128,6 +131,8 @@ export function createWebGLRenderer(canvas) {
   };
   const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer();
   const gridVertices=createGridVertices();
+  uploadGeometry(gl,gridBuffer,gridVertices);
+  uploadGeometry(gl,cubeBuffer,CUBE_VERTICES);
   let yaw=.78,pitch=.58,distance=11,dragging=false,lastX=0,lastY=0,lastScene=null,lastSelectedId=null;
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
@@ -154,17 +159,17 @@ export function createWebGLRenderer(canvas) {
     gl.uniform3fv(locations.tint,[1,1,1]);
     gl.uniform3fv(locations.lightDirection,[-0.45,-1.0,-0.3]);
     gl.uniform1f(locations.ambient,0.32);
-    bindGeometry(gl,gridBuffer,gridVertices,locations.position,locations.color,locations.normal);
+    bindGeometry(gl,gridBuffer,locations.position,locations.color,locations.normal);
     gl.disable(gl.CULL_FACE);
     gl.drawArrays(gl.LINES,0,gridVertices.length/9);
     gl.enable(gl.CULL_FACE);
-    bindGeometry(gl,cubeBuffer,CUBE_VERTICES,locations.position,locations.color,locations.normal);
+    bindGeometry(gl,cubeBuffer,locations.position,locations.color,locations.normal);
     for(const entity of (scene?.entities||[])){
       if(entity.enabled===false)continue;
       gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
       const tint=entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
       gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);
-      gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/6);
+      gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
     }
   }
   window.addEventListener("resize",()=>{ if(lastScene) render(lastScene,lastSelectedId); });
