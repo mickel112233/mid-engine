@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <stdexcept>
 #include <vector>
 
 namespace {
@@ -13,6 +14,7 @@ int main(){
     using namespace mid::assets;
     AssetManager manager(6,[](const std::filesystem::path& path){
         const auto name=path.filename().string();
+        if(name=="missing.bin") throw std::runtime_error("fixture missing");
         return std::vector<std::byte>(name=="first.bin"?4U:5U,std::byte{0x2A});
     });
     const auto first=manager.loadAsync("virtual/first.bin");
