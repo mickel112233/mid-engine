@@ -130,3 +130,4 @@ ImageRgba8 decodeImportedTexture(const ImportedTexture& texture) {
  for(const auto byte:texture.bytes)encoded.push_back(static_cast<std::byte>(byte));
  return decodeImage(encoded);
 }
+} // namespace mid::assets
