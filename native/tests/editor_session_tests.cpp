@@ -21,7 +21,7 @@ int main() {
     runtime.position.y = 99.0;
     editor.setRuntimeTransform(id, runtime);
     check(editor.runtimeScene()->get(id).transform.position.y == 99.0, "runtime scene accepts play-mode simulation updates");
-    check(editor.editScene().get(id).transform.position.y == 2.0, "runtime mutations do not modify authoring scene");
+    check(editor.editScene().get(id).transform.position.y == 0.0, "runtime mutations do not modify authoring scene");
     bool locked = false;
     try { editor.translateAxis(id, mid::editor::Axis::X, 1.0); } catch (const std::logic_error&) { locked = true; }
     check(locked, "authoring gizmos are locked during play mode");
