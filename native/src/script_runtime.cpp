@@ -9,7 +9,7 @@ ExecutionResult Runtime::execute(const Program& program,Scene& scene)const noexc
         if(program.instructions.size()>budget_){result.error="Script exceeds instruction budget";return result;}
         for(const auto& instruction:program.instructions){
             ++result.executed;
-            if(instruction.op==OpCode::Halt){result.completed=true;return result;}
+            if(instruction.op==OpCode::Halt){scene=std::move(candidate);result.completed=true;return result;}
             auto& entity=candidate.get(instruction.entity);
             Transform transform=entity.transform;
             switch(instruction.op){
@@ -19,7 +19,7 @@ ExecutionResult Runtime::execute(const Program& program,Scene& scene)const noexc
             case OpCode::SetActive: entity.active=instruction.flag;continue;
             case OpCode::AddPosition:
                 transform.position.x+=instruction.value.x;transform.position.y+=instruction.value.y;transform.position.z+=instruction.value.z;break;
-            case OpCode::Halt: result.completed=true;return result;
+            case OpCode::Halt: scene=std::move(candidate);result.completed=true;return result;
             }
             candidate.setTransform(instruction.entity,transform);
         }
