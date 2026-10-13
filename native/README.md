@@ -37,3 +37,6 @@ Keep core runtime systems independent of browser APIs. Future modules should bui
 - `mid/script_runtime.hpp`: a data-only, instruction-budgeted command VM that can mutate scene transforms/active state without arbitrary native calls, filesystem access, or unbounded instruction loops.
 
 These are production-oriented interfaces and testable foundations, not a complete GPU backend or a claim of feature parity with Unreal. In particular, the renderer still needs a concrete graphics backend, robust broadphase (BVH/spatial hash), full PBR/shadow/IBL pipeline, production image/material decoders, skeleton-local transform propagation, and a full scripting language integration.
+
+
+Additional native modules: `mid/pbr.hpp` provides a CPU Cook-Torrance/GGX shading reference, and `mid/mtl_importer.hpp` imports Wavefront MTL diffuse colors, opacity, shininess-derived roughness, and base-color texture references. The physics world now uses a spatial-hash broadphase with candidate/test counters and supports static plane colliders. Animation clips sample both position and Euler rotation tracks; script execution stages scene changes and commits only when the program completes successfully.
