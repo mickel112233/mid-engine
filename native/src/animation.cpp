@@ -36,8 +36,8 @@ void Clip::validate(const Skeleton& skeleton) const {
         for(const auto& key:track.positions){if(!std::isfinite(key.time)||key.time<0||key.time>duration||key.time<previous||!std::isfinite(key.value.x)||!std::isfinite(key.value.y)||!std::isfinite(key.value.z))throw std::invalid_argument("Animation keyframe is invalid or unsorted");previous=key.time;}}
 }
 Animator::Animator(Skeleton skeleton):skeleton_(std::move(skeleton)){skeleton_.validate();for(auto& j:skeleton_.joints)j.position=j.bindPosition;}
-void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=&clip;time_=0;looping_=looping;}
-void Animator::stop()noexcept{clip_=nullptr;time_=0;for(auto& j:skeleton_.joints)j.position=j.bindPosition;}
+void Animator::play(const Clip& clip,bool looping){clip.validate(skeleton_);clip_=clip;time_=0;looping_=looping;}
+void Animator::stop()noexcept{clip_.reset();time_=0;for(auto& j:skeleton_.joints)j.position=j.bindPosition;}
 void Animator::update(float delta){
     if(!std::isfinite(delta)||delta<0)throw std::invalid_argument("Animation delta must be finite and non-negative");
     if(!clip_)return;time_+=delta;
