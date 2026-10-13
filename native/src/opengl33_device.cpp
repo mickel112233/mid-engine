@@ -11,9 +11,10 @@ namespace mid::render::gl33 {
 namespace {
 constexpr Enum GL_ARRAY_BUFFER=0x8892,GL_ELEMENT_ARRAY_BUFFER=0x8893,GL_STATIC_DRAW=0x88E4,GL_DYNAMIC_DRAW=0x88E8;
 constexpr Enum GL_FLOAT=0x1406,GL_UNSIGNED_INT=0x1405,GL_TRIANGLES=0x0004,GL_TEXTURE_2D=0x0DE1,GL_RGBA=0x1908,GL_RGBA8=0x8058,GL_UNSIGNED_BYTE=0x1401;
-constexpr Enum GL_TEXTURE_MIN_FILTER=0x2801,GL_TEXTURE_MAG_FILTER=0x2800,GL_TEXTURE_WRAP_S=0x2802,GL_TEXTURE_WRAP_T=0x2803,GL_LINEAR=0x2601,GL_REPEAT=0x2901;
+constexpr Enum GL_TEXTURE_MIN_FILTER=0x2801,GL_TEXTURE_MAG_FILTER=0x2800,GL_TEXTURE_WRAP_S=0x2802,GL_TEXTURE_WRAP_T=0x2803,GL_LINEAR=0x2601,GL_NEAREST=0x2600,GL_REPEAT=0x2901,GL_CLAMP_TO_EDGE=0x812F;
 constexpr Enum GL_VERTEX_SHADER=0x8B31,GL_FRAGMENT_SHADER=0x8B30,GL_COMPILE_STATUS=0x8B81,GL_LINK_STATUS=0x8B82,GL_INFO_LOG_LENGTH=0x8B84;
-constexpr Enum GL_DEPTH_TEST=0x0B71,GL_LEQUAL=0x0203,GL_COLOR_BUFFER_BIT=0x00004000,GL_DEPTH_BUFFER_BIT=0x00000100,GL_TEXTURE0=0x84C0,GL_BLEND=0x0BE2,GL_SRC_ALPHA=0x0302,GL_ONE_MINUS_SRC_ALPHA=0x0303;
+constexpr Enum GL_DEPTH_TEST=0x0B71,GL_LEQUAL=0x0203,GL_COLOR_BUFFER_BIT=0x00004000,GL_DEPTH_BUFFER_BIT=0x00000100,GL_TEXTURE0=0x84C0,GL_TEXTURE1=0x84C1,GL_BLEND=0x0BE2,GL_SRC_ALPHA=0x0302,GL_ONE_MINUS_SRC_ALPHA=0x0303;
+constexpr Enum GL_FRAMEBUFFER=0x8D40,GL_DEPTH_ATTACHMENT=0x8D00,GL_COLOR_ATTACHMENT0=0x8CE0,GL_RENDERBUFFER=0x8D41,GL_RGBA4=0x8056,GL_DEPTH_COMPONENT=0x1902,GL_FRAMEBUFFER_COMPLETE=0x8CD5,GL_TIME_ELAPSED=0x88BF,GL_QUERY_RESULT_AVAILABLE=0x8867,GL_QUERY_RESULT=0x8866;
 struct V3 {float x,y,z;};
 V3 mul(V3 a,float s){return {a.x*s,a.y*s,a.z*s};}
 float dot(V3 a,V3 b){return a.x*b.x+a.y*b.y+a.z*b.z;}
@@ -44,6 +45,14 @@ in vec3 vWorldPosition; in vec3 vNormal; in vec2 vUv; in vec4 vColor;
 uniform vec4 uBaseColor; uniform vec3 uLightDirection; uniform vec3 uCameraPosition; uniform float uMetallic; uniform float uRoughness; uniform int uHasTexture; uniform sampler2D uBaseColorTexture;
 out vec4 outColor;
 void main(){vec4 base=uBaseColor*vColor;if(uHasTexture==1)base*=texture(uBaseColorTexture,vUv);vec3 N=normalize(vNormal),V=normalize(uCameraPosition-vWorldPosition),L=normalize(-uLightDirection),H=normalize(V+L);float nl=max(dot(N,L),0.0),nv=max(dot(N,V),0.001),nh=max(dot(N,H),0.0),vh=max(dot(V,H),0.0);float r=clamp(uRoughness,0.05,1.0),a=r*r,a2=a*a,d=nh*nh*(a2-1.0)+1.0;float D=a2/max(3.14159265*d*d,0.001),k=(r+1.0)*(r+1.0)/8.0,G=(nv/(nv*(1.0-k)+k))*(nl/(nl*(1.0-k)+k));vec3 f0=mix(vec3(0.04),base.rgb,uMetallic),F=f0+(1.0-f0)*pow(1.0-vh,5.0);vec3 spec=D*G*F/max(4.0*nv*max(nl,0.001),0.001),diff=(1.0-F)*(1.0-uMetallic)*base.rgb/3.14159265;vec3 hemi=mix(vec3(0.07,0.06,0.05),vec3(0.25,0.34,0.48),clamp(N.y*0.5+0.5,0.0,1.0));outColor=vec4(base.rgb*hemi*0.35+(diff+spec)*nl,base.a);})";
+constexpr const char* SHADOW_VERTEX_SHADER=R"(#version 330 core
+layout(location=0) in vec3 aPosition;
+uniform mat4 uModel; uniform mat4 uLightViewProjection;
+void main(){gl_Position=uLightViewProjection*uModel*vec4(aPosition,1.0);})";
+constexpr const char* SHADOW_FRAGMENT_SHADER=R"(#version 330 core
+out vec4 outColor; void main(){outColor=vec4(1.0);})";
+bool allShadowFunctions(const Functions& g){return g.GenFramebuffers&&g.DeleteFramebuffers&&g.BindFramebuffer&&g.FramebufferTexture2D&&g.FramebufferRenderbuffer&&g.CheckFramebufferStatus&&g.GenRenderbuffers&&g.DeleteRenderbuffers&&g.BindRenderbuffer&&g.RenderbufferStorage;}
+bool allQueryFunctions(const Functions& g){return g.GenQueries&&g.DeleteQueries&&g.BeginQuery&&g.EndQuery&&g.GetQueryObjectiv&&g.GetQueryObjectui64v;}
 bool allFunctions(const Functions& g){
  return g.GenBuffers&&g.DeleteBuffers&&g.BindBuffer&&g.BufferData&&g.GenVertexArrays&&g.DeleteVertexArrays&&g.BindVertexArray&&g.EnableVertexAttribArray&&g.DisableVertexAttribArray&&g.VertexAttribPointer&&g.VertexAttribDivisor&&g.CreateShader&&g.ShaderSource&&g.CompileShader&&g.GetShaderiv&&g.GetShaderInfoLog&&g.DeleteShader&&g.CreateProgram&&g.AttachShader&&g.LinkProgram&&g.GetProgramiv&&g.GetProgramInfoLog&&g.DeleteProgram&&g.UseProgram&&g.GetUniformLocation&&g.UniformMatrix4fv&&g.Uniform3f&&g.Uniform4f&&g.Uniform1f&&g.Uniform1i&&g.DrawElementsInstanced&&g.DrawElements&&g.Enable&&g.Disable&&g.BlendFunc&&g.DepthMask&&g.DepthFunc&&g.Clear&&g.ClearColor&&g.GenTextures&&g.DeleteTextures&&g.BindTexture&&g.TexImage2D&&g.TexParameteri&&g.ActiveTexture;
 }
@@ -54,7 +63,28 @@ OpenGL33Device::OpenGL33Device(Functions functions):gl_(functions){
  UInt fragment=0;
  try{fragment=compile(GL_FRAGMENT_SHADER,FRAGMENT_SHADER);program_=gl_.CreateProgram();if(!program_)throw std::runtime_error("OpenGL could not create a shader program");gl_.AttachShader(program_,vertex);gl_.AttachShader(program_,fragment);gl_.LinkProgram(program_);Int ok=0;gl_.GetProgramiv(program_,GL_LINK_STATUS,&ok);if(!ok){Int n=0;gl_.GetProgramiv(program_,GL_INFO_LOG_LENGTH,&n);std::string log(static_cast<std::size_t>(std::max(1,n)),'\0');gl_.GetProgramInfoLog(program_,static_cast<Sizei>(log.size()),nullptr,log.data());throw std::runtime_error("OpenGL PBR program link failed: "+log);}}
  catch(...){if(fragment)gl_.DeleteShader(fragment);gl_.DeleteShader(vertex);if(program_)gl_.DeleteProgram(program_);program_=0;throw;}
- gl_.DeleteShader(vertex);gl_.DeleteShader(fragment);gl_.Enable(GL_DEPTH_TEST);gl_.DepthFunc(GL_LEQUAL);gl_.ClearColor(0.075F,0.083F,0.105F,1.0F);
+ gl_.DeleteShader(vertex);gl_.DeleteShader(fragment);
+ if(allShadowFunctions(gl_)){
+  try{
+   const UInt sv=compile(GL_VERTEX_SHADER,SHADOW_VERTEX_SHADER),sf=compile(GL_FRAGMENT_SHADER,SHADOW_FRAGMENT_SHADER);
+   shadowProgram_=gl_.CreateProgram();gl_.AttachShader(shadowProgram_,sv);gl_.AttachShader(shadowProgram_,sf);gl_.LinkProgram(shadowProgram_);
+   Int linked=0;gl_.GetProgramiv(shadowProgram_,GL_LINK_STATUS,&linked);gl_.DeleteShader(sv);gl_.DeleteShader(sf);
+   if(!linked)throw std::runtime_error("Native shadow shader failed to link");
+   gl_.GenTextures(1,&shadowTexture_);gl_.BindTexture(GL_TEXTURE_2D,shadowTexture_);
+   gl_.TexImage2D(GL_TEXTURE_2D,0,static_cast<Int>(GL_DEPTH_COMPONENT),shadowSize_,shadowSize_,0,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,nullptr);
+   gl_.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,static_cast<Int>(GL_NEAREST));gl_.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,static_cast<Int>(GL_NEAREST));
+   gl_.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,static_cast<Int>(GL_CLAMP_TO_EDGE));gl_.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,static_cast<Int>(GL_CLAMP_TO_EDGE));
+   gl_.GenRenderbuffers(1,&shadowColorBuffer_);gl_.BindRenderbuffer(GL_RENDERBUFFER,shadowColorBuffer_);gl_.RenderbufferStorage(GL_RENDERBUFFER,GL_RGBA4,shadowSize_,shadowSize_);
+   gl_.GenFramebuffers(1,&shadowFramebuffer_);gl_.BindFramebuffer(GL_FRAMEBUFFER,shadowFramebuffer_);
+   gl_.FramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,shadowTexture_,0);gl_.FramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,shadowColorBuffer_);
+   shadowEnabled_=gl_.CheckFramebufferStatus(GL_FRAMEBUFFER)==GL_FRAMEBUFFER_COMPLETE;gl_.BindFramebuffer(GL_FRAMEBUFFER,0);
+   if(!shadowEnabled_)throw std::runtime_error("Native shadow framebuffer is incomplete");
+  }catch(...){
+   if(shadowFramebuffer_)gl_.DeleteFramebuffers(1,&shadowFramebuffer_);if(shadowTexture_)gl_.DeleteTextures(1,&shadowTexture_);if(shadowColorBuffer_)gl_.DeleteRenderbuffers(1,&shadowColorBuffer_);if(shadowProgram_)gl_.DeleteProgram(shadowProgram_);
+   shadowFramebuffer_=shadowTexture_=shadowColorBuffer_=shadowProgram_=0;shadowEnabled_=false;gl_.BindFramebuffer(GL_FRAMEBUFFER,0);
+  }
+ }
+ gl_.Enable(GL_DEPTH_TEST);gl_.DepthFunc(GL_LEQUAL);gl_.ClearColor(0.075F,0.083F,0.105F,1.0F);
 }
 OpenGL33Device::~OpenGL33Device(){
  for(auto& [id,m]:meshes_){(void)id;if(m.vertexBuffer)gl_.DeleteBuffers(1,&m.vertexBuffer);if(m.indexBuffer)gl_.DeleteBuffers(1,&m.indexBuffer);if(m.instanceBuffer)gl_.DeleteBuffers(1,&m.instanceBuffer);if(m.vao)gl_.DeleteVertexArrays(1,&m.vao);}
