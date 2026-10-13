@@ -10,10 +10,10 @@
 
 namespace mid::animation {
 using namespace mid::render;
-struct Joint { std::string name; std::int32_t parent{-1}; Vec3f bindPosition{}; Vec3f position{}; };
+struct Joint { std::string name; std::int32_t parent{-1}; Vec3f bindPosition{}; Vec3f position{}; Vec3f bindRotationDegrees{}; Vec3f rotationDegrees{}; };
 struct Skeleton { std::vector<Joint> joints; void validate() const; };
 struct Vec3Key { float time{0}; Vec3f value{}; };
-struct JointTrack { std::size_t joint{0}; std::vector<Vec3Key> positions; };
+struct JointTrack { std::size_t joint{0}; std::vector<Vec3Key> positions; std::vector<Vec3Key> rotations; };
 struct Clip { std::string name; float duration{0}; std::vector<JointTrack> tracks; void validate(const Skeleton& skeleton) const; };
 class Animator final {
 public:
