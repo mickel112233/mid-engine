@@ -15,6 +15,7 @@
 #ifdef MID_ENGINE_WITH_JPEG
 extern "C" {
 #include <jpeglib.h>
+#include <jerror.h>
 }
 #endif
 namespace mid::assets {
@@ -47,7 +48,7 @@ ImageRgba8 decodeJpeg(std::span<const std::byte> bytes){
  if(jpeg_read_header(&decoder,TRUE)!=JPEG_HEADER_OK)ERREXIT(&decoder,JERR_NO_IMAGE);
  decoder.out_color_space=JCS_RGB;
  if(!jpeg_start_decompress(&decoder))ERREXIT(&decoder,JERR_CANT_SUSPEND);
- const auto width=decoder.output_width,height=decoder.output_height,channels=decoder.output_components;
+ const auto width=decoder.output_width;const auto height=decoder.output_height;const auto channels=decoder.output_components;
  if(width==0||height==0||channels!=3||static_cast<std::uint64_t>(width)*height>std::numeric_limits<std::size_t>::max()/3U)ERREXIT(&decoder,JERR_WIDTH_OVERFLOW);
  const auto count=static_cast<std::size_t>(width)*height*3U;raw=static_cast<unsigned char*>(std::malloc(count));
  if(!raw)ERREXIT(&decoder,JERR_OUT_OF_MEMORY);
@@ -131,7 +132,7 @@ ImageRgba32F decodeHdr(std::span<const std::byte> b){
     if(cursor+2>b.size())throw std::invalid_argument("Truncated Radiance HDR RLE packet");
     const unsigned code=std::to_integer<unsigned char>(b[cursor++]),value=std::to_integer<unsigned char>(b[cursor++]);
     if(code>128U){const unsigned run=code-128U;if(run==0||run>width-x)throw std::invalid_argument("Invalid Radiance HDR RLE run");for(unsigned k=0;k<run;++k)scanline[(static_cast<std::size_t>(x++)*4U)+channel]=static_cast<std::uint8_t>(value);}
-    else {const unsigned run=code;if(run==0||run>width-x+1U)throw std::invalid_argument("Invalid Radiance HDR literal run");scanline[static_cast<std::size_t>(x++)*4U+channel]=static_cast<std::uint8_t>(value);for(unsigned k=1;k<run;++k){if(cursor>=b.size())throw std::invalid_argument("Truncated Radiance HDR literal packet");scanline[static_cast<std::size_t>(x++)*4U+channel]=std::to_integer<std::uint8_t>(b[cursor++]);}}
+    else {const unsigned run=code;if(run==0||run>width-x)throw std::invalid_argument("Invalid Radiance HDR literal run");scanline[static_cast<std::size_t>(x++)*4U+channel]=static_cast<std::uint8_t>(value);for(unsigned k=1;k<run;++k){if(cursor>=b.size())throw std::invalid_argument("Truncated Radiance HDR literal packet");scanline[static_cast<std::size_t>(x++)*4U+channel]=std::to_integer<std::uint8_t>(b[cursor++]);}}
    }}
   }else{
    for(unsigned x=0;x<width;++x){if(x>0){if(cursor+4>b.size())throw std::invalid_argument("Truncated Radiance HDR flat pixel data");}
