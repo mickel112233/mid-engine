@@ -2,6 +2,12 @@ const VERTEX_SHADER = `
 attribute vec3 aPosition;
 attribute vec3 aColor;
 attribute vec3 aNormal;
+attribute vec4 aInstanceModel0;
+attribute vec4 aInstanceModel1;
+attribute vec4 aInstanceModel2;
+attribute vec4 aInstanceModel3;
+attribute vec3 aInstanceTint;
+uniform float uInstanced;
 uniform mat4 uViewProjection;
 uniform mat4 uModel;
 uniform vec3 uTint;
@@ -11,10 +17,16 @@ varying vec3 vColor;
 varying vec3 vNormal;
 varying vec3 vWorldPosition;
 void main() {
-  vec4 worldPosition = uModel * vec4(aPosition, 1.0);
+  mat4 model = uModel;
+  vec3 tint = uTint;
+  if (uInstanced > 0.5) {
+    model = mat4(aInstanceModel0, aInstanceModel1, aInstanceModel2, aInstanceModel3);
+    tint *= aInstanceTint;
+  }
+  vec4 worldPosition = model * vec4(aPosition, 1.0);
   vWorldPosition = worldPosition.xyz;
-  vNormal = normalize(mat3(uModel) * aNormal);
-  vColor = aColor * uTint;
+  vNormal = normalize(mat3(model) * aNormal);
+  vColor = aColor * tint;
   gl_Position = uViewProjection * worldPosition;
 }`;
 
@@ -167,9 +179,16 @@ export function createWebGLRenderer(canvas) {
     ambient:gl.getUniformLocation(program,"uAmbient"),
     cameraPosition:gl.getUniformLocation(program,"uCameraPosition"),
     metallic:gl.getUniformLocation(program,"uMetallic"),
-    roughness:gl.getUniformLocation(program,"uRoughness")
+    roughness:gl.getUniformLocation(program,"uRoughness"),
+    instanced:gl.getUniformLocation(program,"uInstanced"),
+    instanceModel0:gl.getAttribLocation(program,"aInstanceModel0"),
+    instanceModel1:gl.getAttribLocation(program,"aInstanceModel1"),
+    instanceModel2:gl.getAttribLocation(program,"aInstanceModel2"),
+    instanceModel3:gl.getAttribLocation(program,"aInstanceModel3"),
+    instanceTint:gl.getAttribLocation(program,"aInstanceTint")
   };
-  const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer();
+  const instancing=gl.getExtension("ANGLE_instanced_arrays");
+  const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer(),instanceBuffer=gl.createBuffer();
   const gridVertices=createGridVertices();
   uploadGeometry(gl,gridBuffer,gridVertices);
   uploadGeometry(gl,cubeBuffer,CUBE_VERTICES);
@@ -199,6 +218,7 @@ export function createWebGLRenderer(canvas) {
     const viewProjection=multiply(perspective(Math.PI/4,canvas.width/canvas.height,.1,150),lookAt(eye,[0,0,0],[0,1,0]));
     gl.uniformMatrix4fv(locations.viewProjection,false,viewProjection);
     gl.uniformMatrix4fv(locations.model,false,IDENTITY);
+    gl.uniform1f(locations.instanced,0);
     gl.uniform3fv(locations.tint,[1,1,1]);
     gl.uniform3fv(locations.lightDirection,[-0.45,-1.0,-0.3]);
     gl.uniform3fv(locations.cameraPosition,eye);
@@ -211,7 +231,7 @@ export function createWebGLRenderer(canvas) {
     gl.enable(gl.CULL_FACE);
     bindGeometry(gl,cubeBuffer,locations.position,locations.color,locations.normal);
     let visibleObjects=0,culledObjects=0;
-    let drawCalls=1;
+    const visible=[];
     for(const entity of (scene?.entities||[])){
       if(entity.enabled===false){culledObjects++;continue;}
       const transform=entity.transform||{},position=transform.position||[0,0,0],scale=transform.scale||[1,1,1];
@@ -220,18 +240,48 @@ export function createWebGLRenderer(canvas) {
       const radius=Math.max(Math.abs(scale[0]),Math.abs(scale[1]),Math.abs(scale[2]))*factor*1.75;
       if(depth+radius<.1||depth-radius>150||Math.abs(dot(relative,right))>Math.max(0,depth)*tanH+radius||Math.abs(dot(relative,up))>Math.max(0,depth)*tanV+radius){culledObjects++;continue;}
       visibleObjects++;
+      const tint=entity.id===selectedId?[1.2,1.24,.88]:entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
+      visible.push({entity,matrix:modelMatrix(entity),tint});
+    }
+    let drawCalls=1;
+    if(instancing&&visible.length){
+      // One GPU instanced draw for the editor's shared preview cube geometry.
+      const stride=19,data=new Float32Array(visible.length*stride);
+      visible.forEach((item,index)=>{data.set(item.matrix,index*stride);data.set(item.tint,index*stride+16);});
+      gl.bindBuffer(gl.ARRAY_BUFFER,instanceBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);
+      const attributes=[
+        [locations.instanceModel0,4,0],
+        [locations.instanceModel1,4,16],
+        [locations.instanceModel2,4,32],
+        [locations.instanceModel3,4,48],
+        [locations.instanceTint,3,64]
+      ];
+      for(const [location,size,offset] of attributes){
+        gl.enableVertexAttribArray(location);
+        gl.vertexAttribPointer(location,size,gl.FLOAT,false,stride*4,offset*4);
+        instancing.vertexAttribDivisorANGLE(location,1);
+      }
+      gl.uniform1f(locations.instanced,1);
+      gl.drawArraysInstancedANGLE(gl.TRIANGLES,0,CUBE_VERTICES.length/9,visible.length);
+      for(const [location] of attributes){instancing.vertexAttribDivisorANGLE(location,0);gl.disableVertexAttribArray(location);}
+      gl.uniform1f(locations.instanced,0);
       drawCalls++;
-      gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
-      const tint=entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
-      gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);
-      gl.uniform1f(locations.metallic,entity.type==="light"?0.18:0.08);
-      gl.uniform1f(locations.roughness,entity.type==="camera"?0.32:0.58);
-      gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
+    } else {
+      bindGeometry(gl,cubeBuffer,locations.position,locations.color,locations.normal);
+      for(const item of visible){
+        gl.uniformMatrix4fv(locations.model,false,item.matrix);
+        gl.uniform3fv(locations.tint,item.tint);
+        gl.uniform1f(locations.metallic,item.entity.type==="light"?0.18:0.08);
+        gl.uniform1f(locations.roughness,item.entity.type==="camera"?0.32:0.58);
+        gl.drawArrays(gl.TRIANGLES,0,CUBE_VERTICES.length/9);
+        drawCalls++;
+      }
     }
     return { submitted:(scene?.entities||[]).length, visible:visibleObjects, culled:culledObjects, drawCalls, cpuMilliseconds:performance.now()-startedAt };
   }
   window.addEventListener("resize",()=>{ if(lastScene) render(lastScene,lastSelectedId); });
   let destroyed=false;
-  function destroy(){if(destroyed)return;destroyed=true;gl.deleteBuffer(cubeBuffer);gl.deleteBuffer(gridBuffer);gl.deleteProgram(program);}
+  function destroy(){if(destroyed)return;destroyed=true;gl.deleteBuffer(cubeBuffer);gl.deleteBuffer(gridBuffer);gl.deleteBuffer(instanceBuffer);gl.deleteProgram(program);}
   return { render, destroy };
 }
