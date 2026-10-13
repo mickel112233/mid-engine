@@ -1,6 +1,7 @@
 #pragma once
 #include "mid/rendering.hpp"
 #include "mid/animation.hpp"
+#include "mid/image_decoder.hpp"
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -15,4 +16,6 @@ struct ImportedModel { std::vector<render::MeshData> meshes; std::vector<ModelMa
 // Supports the formats enabled in the linked Assimp build, including glTF/GLB and FBX.
 // Throws a descriptive error if Assimp support is not built or import fails.
 [[nodiscard]] ImportedModel importModelFile(const std::filesystem::path& path);
+// Converts an Assimp embedded image payload to RGBA8 for direct GPU texture upload.
+[[nodiscard]] ImageRgba8 decodeImportedTexture(const ImportedTexture& texture);
 }
