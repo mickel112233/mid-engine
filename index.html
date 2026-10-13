@@ -29,6 +29,14 @@
           <div class="viewport-grid"></div>
           <div class="viewport-top"><span class="viewport-label"><span class="status-dot"></span> EDITOR VIEWPORT</span><span class="viewport-coords">DRAG TO ORBIT · WHEEL TO ZOOM</span></div>
           <canvas id="scene-canvas" class="scene-canvas" aria-label="Interactive 3D scene viewport"></canvas>
+          <div id="viewport-gizmo" class="transform-gizmo hidden" role="group" aria-label="Viewport translation gizmo">
+            <button type="button" data-axis="X" data-delta="-0.5" aria-label="Move selected entity negative X">X−</button>
+            <button type="button" data-axis="X" data-delta="0.5" aria-label="Move selected entity positive X">X+</button>
+            <button type="button" data-axis="Y" data-delta="-0.5" aria-label="Move selected entity negative Y">Y−</button>
+            <button type="button" data-axis="Y" data-delta="0.5" aria-label="Move selected entity positive Y">Y+</button>
+            <button type="button" data-axis="Z" data-delta="-0.5" aria-label="Move selected entity negative Z">Z−</button>
+            <button type="button" data-axis="Z" data-delta="0.5" aria-label="Move selected entity positive Z">Z+</button>
+          </div>
           <div class="viewport-empty" id="viewport-empty"><div class="empty-cube">◇</div><strong>Your world starts here.</strong><span>Add an entity to begin building your scene.</span><button class="button primary" id="empty-add">＋ Add first entity</button></div>
           <div class="viewport-bottom"><span id="scene-summary">0 entities</span><span id="render-stats">Renderer statistics unavailable</span></div>
         </div>
