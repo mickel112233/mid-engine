@@ -100,6 +100,11 @@ OpenGL33Device::OpenGL33Device(Functions functions):gl_(functions){
 OpenGL33Device::~OpenGL33Device(){
  for(auto& [id,m]:meshes_){(void)id;if(m.vertexBuffer)gl_.DeleteBuffers(1,&m.vertexBuffer);if(m.indexBuffer)gl_.DeleteBuffers(1,&m.indexBuffer);if(m.instanceBuffer)gl_.DeleteBuffers(1,&m.instanceBuffer);if(m.vao)gl_.DeleteVertexArrays(1,&m.vao);}
  for(auto& [id,r]:resources_){(void)id;if(r.kind==ResourceKind::Buffer)gl_.DeleteBuffers(1,&r.handle);else if(r.kind==ResourceKind::Texture)gl_.DeleteTextures(1,&r.handle);}
+ if(gpuQuery_&&allQueryFunctions(gl_))gl_.DeleteQueries(1,&gpuQuery_);
+ if(shadowFramebuffer_&&gl_.DeleteFramebuffers)gl_.DeleteFramebuffers(1,&shadowFramebuffer_);
+ if(shadowTexture_)gl_.DeleteTextures(1,&shadowTexture_);
+ if(shadowColorBuffer_&&gl_.DeleteRenderbuffers)gl_.DeleteRenderbuffers(1,&shadowColorBuffer_);
+ if(shadowProgram_)gl_.DeleteProgram(shadowProgram_);
  if(program_)gl_.DeleteProgram(program_);
 }
 UInt OpenGL33Device::compile(Enum type,const char* source){
@@ -122,7 +127,14 @@ void OpenGL33Device::destroyResource(ResourceHandle h)noexcept{
  if(h.kind==ResourceKind::Buffer)gl_.DeleteBuffers(1,&it->second.handle);else if(h.kind==ResourceKind::Texture)gl_.DeleteTextures(1,&it->second.handle);
  resources_.erase(it);
 }
-void OpenGL33Device::beginFrame(){stats_={};gl_.Clear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);}
+void OpenGL33Device::beginFrame(){
+ stats_={};
+ if(allQueryFunctions(gl_)){
+  if(queryPending_){Int available=0;gl_.GetQueryObjectiv(gpuQuery_,GL_QUERY_RESULT_AVAILABLE,&available);if(available){UInt64 nanoseconds=0;gl_.GetQueryObjectui64v(gpuQuery_,GL_QUERY_RESULT,&nanoseconds);lastGpuMilliseconds_=static_cast<double>(nanoseconds)/1000000.0;gpuTimingAvailable_=true;queryPending_=false;}}
+  if(!queryPending_&&!queryActive_){if(!gpuQuery_)gl_.GenQueries(1,&gpuQuery_);if(gpuQuery_){gl_.BeginQuery(GL_TIME_ELAPSED,gpuQuery_);queryActive_=true;}}
+ }
+ gl_.BindFramebuffer(GL_FRAMEBUFFER,0);gl_.Viewport(0,0,viewportWidth_,viewportHeight_);gl_.Clear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+}
 void OpenGL33Device::registerMesh(ResourceId id,const MeshData& input){
  if(id==0)throw std::invalid_argument("Mesh resource ID cannot be zero");
  input.validate();
@@ -151,8 +163,16 @@ void OpenGL33Device::bindBaseColorTexture(ResourceId material,ResourceId texture
  auto m=materials_.find(material);auto t=resources_.find(texture);if(m==materials_.end())throw std::out_of_range("Material resource does not exist");if(t==resources_.end()||t->second.kind!=ResourceKind::Texture)throw std::out_of_range("Base-color texture resource does not exist");m->second.texture=texture;
 }
 void OpenGL33Device::submit(const RenderPlan& plan,const Camera& camera,const DirectionalLight& light){
- camera.validate();const auto vp=viewProjection(camera);gl_.UseProgram(program_);gl_.UniformMatrix4fv(uniform("uViewProjection"),1,0,vp.data());gl_.Uniform3f(uniform("uLightDirection"),light.direction.x,light.direction.y,light.direction.z);gl_.Uniform3f(uniform("uCameraPosition"),camera.position.x,camera.position.y,camera.position.z);gl_.Uniform1i(uniform("uBaseColorTexture"),0);
- stats_=plan.stats;stats_.drawCalls=0;stats_.batches=0;stats_.estimatedInstanceCount=0;
+ camera.validate();const auto vp=viewProjection(camera);const auto lightVp=lightViewProjection(light);std::size_t shadowDrawCalls=0;
+ if(shadowEnabled_&&shadowFramebuffer_&&shadowProgram_){
+  gl_.BindFramebuffer(GL_FRAMEBUFFER,shadowFramebuffer_);gl_.Viewport(0,0,shadowSize_,shadowSize_);gl_.Clear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);gl_.UseProgram(shadowProgram_);
+  const Int shadowModel=gl_.GetUniformLocation(shadowProgram_,"uModel"),shadowVp=gl_.GetUniformLocation(shadowProgram_,"uLightViewProjection");gl_.UniformMatrix4fv(shadowVp,1,0,lightVp.data());
+  auto castShadows=[&](const std::vector<DrawBatch>& batches){for(const auto& batch:batches){const auto mesh=meshes_.find(batch.mesh);if(mesh==meshes_.end())continue;gl_.BindVertexArray(mesh->second.vao);for(const auto entity:batch.entityIds){const auto tr=transforms_.find(entity);if(tr==transforms_.end())continue;gl_.UniformMatrix4fv(shadowModel,1,0,tr->second.data());gl_.DrawElements(GL_TRIANGLES,mesh->second.indexCount,GL_UNSIGNED_INT,nullptr);++shadowDrawCalls;}}};
+  castShadows(plan.opaqueBatches);castShadows(plan.transparentBatches);gl_.BindVertexArray(0);gl_.BindFramebuffer(GL_FRAMEBUFFER,0);gl_.Viewport(0,0,viewportWidth_,viewportHeight_);
+ }
+ gl_.UseProgram(program_);gl_.UniformMatrix4fv(uniform("uViewProjection"),1,0,vp.data());gl_.UniformMatrix4fv(uniform("uLightViewProjection"),1,0,lightVp.data());gl_.Uniform1i(uniform("uShadowEnabled"),shadowEnabled_?1:0);gl_.Uniform3f(uniform("uLightDirection"),light.direction.x,light.direction.y,light.direction.z);gl_.Uniform3f(uniform("uCameraPosition"),camera.position.x,camera.position.y,camera.position.z);gl_.Uniform1i(uniform("uBaseColorTexture"),0);
+ if(shadowEnabled_&&shadowTexture_){gl_.ActiveTexture(GL_TEXTURE1);gl_.BindTexture(GL_TEXTURE_2D,shadowTexture_);gl_.Uniform1i(uniform("uShadowMap"),1);gl_.ActiveTexture(GL_TEXTURE0);}
+ stats_=plan.stats;stats_.drawCalls=shadowDrawCalls;stats_.batches=0;stats_.estimatedInstanceCount=0;
  auto drawBatches=[&](const std::vector<DrawBatch>& batches,bool transparent){
   for(const auto& batch:batches){const auto meshIt=meshes_.find(batch.mesh);const auto materialIt=materials_.find(batch.material);if(meshIt==meshes_.end()||materialIt==materials_.end())continue;const auto& mesh=meshIt->second;const auto& mat=materialIt->second;
    gl_.Uniform4f(uniform("uBaseColor"),mat.value.baseColor.x,mat.value.baseColor.y,mat.value.baseColor.z,mat.value.baseColor.w);gl_.Uniform1f(uniform("uMetallic"),mat.value.metallic);gl_.Uniform1f(uniform("uRoughness"),mat.value.roughness);
@@ -171,6 +191,7 @@ void OpenGL33Device::submit(const RenderPlan& plan,const Camera& camera,const Di
  };
  drawBatches(plan.opaqueBatches,false);gl_.Enable(GL_BLEND);gl_.BlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);gl_.DepthMask(0);drawBatches(plan.transparentBatches,true);gl_.DepthMask(1);gl_.Disable(GL_BLEND);gl_.BindVertexArray(0);
 }
-void OpenGL33Device::endFrame(){}
+void OpenGL33Device::endFrame(){if(queryActive_){gl_.EndQuery(GL_TIME_ELAPSED);queryActive_=false;queryPending_=true;}stats_.gpuMilliseconds=lastGpuMilliseconds_;stats_.gpuTimingAvailable=gpuTimingAvailable_;}
+void OpenGL33Device::setViewport(Sizei width,Sizei height){if(width<=0||height<=0)throw std::invalid_argument("Viewport dimensions must be positive");viewportWidth_=width;viewportHeight_=height;gl_.Viewport(0,0,width,height);}
 const RenderStats& OpenGL33Device::lastStats()const noexcept{return stats_;}
 }
