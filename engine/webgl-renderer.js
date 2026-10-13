@@ -1,11 +1,17 @@
 const VERTEX_SHADER = `
 attribute vec3 aPosition;
 attribute vec3 aColor;
+attribute vec3 aNormal;
 uniform mat4 uViewProjection;
 uniform mat4 uModel;
 uniform vec3 uTint;
+uniform vec3 uLightDirection;
+uniform float uAmbient;
 varying vec3 vColor;
+varying float vLight;
 void main() {
+  vec3 worldNormal = normalize(mat3(uModel) * aNormal);
+  vLight = uAmbient + (1.0 - uAmbient) * max(dot(worldNormal, normalize(-uLightDirection)), 0.0);
   vColor = aColor * uTint;
   gl_Position = uViewProjection * uModel * vec4(aPosition, 1.0);
 }`;
@@ -13,22 +19,23 @@ void main() {
 const FRAGMENT_SHADER = `
 precision mediump float;
 varying vec3 vColor;
+varying float vLight;
 void main() {
-  gl_FragColor = vec4(vColor, 1.0);
+  gl_FragColor = vec4(vColor * vLight, 1.0);
 }`;
 
 const IDENTITY = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 const CUBE_FACES = [
-  { corners: [[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]], color:[0.78,0.91,0.69] },
-  { corners: [[1,-1,-1],[-1,-1,-1],[-1,1,-1],[1,1,-1]], color:[0.46,0.59,0.39] },
-  { corners: [[-1,1,1],[1,1,1],[1,1,-1],[-1,1,-1]], color:[0.67,0.82,0.56] },
-  { corners: [[-1,-1,-1],[1,-1,-1],[1,-1,1],[-1,-1,1]], color:[0.3,0.42,0.27] },
-  { corners: [[1,-1,1],[1,-1,-1],[1,1,-1],[1,1,1]], color:[0.56,0.72,0.45] },
-  { corners: [[-1,-1,-1],[-1,-1,1],[-1,1,1],[-1,1,-1]], color:[0.39,0.53,0.32] }
+  { corners: [[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]], color:[0.78,0.91,0.69], normal:[0,0,1] },
+  { corners: [[1,-1,-1],[-1,-1,-1],[-1,1,-1],[1,1,-1]], color:[0.46,0.59,0.39], normal:[0,0,-1] },
+  { corners: [[-1,1,1],[1,1,1],[1,1,-1],[-1,1,-1]], color:[0.67,0.82,0.56], normal:[0,1,0] },
+  { corners: [[-1,-1,-1],[1,-1,-1],[1,-1,1],[-1,-1,1]], color:[0.3,0.42,0.27], normal:[0,-1,0] },
+  { corners: [[1,-1,1],[1,-1,-1],[1,1,-1],[1,1,1]], color:[0.56,0.72,0.45], normal:[1,0,0] },
+  { corners: [[-1,-1,-1],[-1,-1,1],[-1,1,1],[-1,1,-1]], color:[0.39,0.53,0.32], normal:[-1,0,0] }
 ];
 const CUBE_VERTICES = new Float32Array(CUBE_FACES.flatMap((face) => {
   const order = [0,1,2,0,2,3];
-  return order.flatMap((index) => [...face.corners[index], ...face.color]);
+  return order.flatMap((index) => [...face.corners[index], ...face.color, ...face.normal]);
 }));
 
 function compileShader(gl, type, source) {
@@ -91,7 +98,7 @@ function createGridVertices() {
   for(let i=-20;i<=20;i++){
     const major=i%5===0;
     const c=major?[.22,.25,.3]:[.15,.17,.21];
-    values.push(i,0,-20,...c,i,0,20,...c,-20,0,i,...c,20,0,i,...c);
+    values.push(i,0,-20,...c,0,1,0,i,0,20,...c,0,1,0,-20,0,i,...c,0,1,0,20,0,i,...c,0,1,0);
   }
   return new Float32Array(values);
 }
@@ -99,9 +106,11 @@ function bindGeometry(gl,buffer,vertices,positionLocation,colorLocation) {
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.enableVertexAttribArray(positionLocation);
-  gl.vertexAttribPointer(positionLocation,3,gl.FLOAT,false,24,0);
+  gl.vertexAttribPointer(positionLocation,3,gl.FLOAT,false,36,0);
   gl.enableVertexAttribArray(colorLocation);
-  gl.vertexAttribPointer(colorLocation,3,gl.FLOAT,false,24,12);
+  gl.vertexAttribPointer(colorLocation,3,gl.FLOAT,false,36,12);
+  gl.enableVertexAttribArray(2);
+  gl.vertexAttribPointer(2,3,gl.FLOAT,false,36,24);
 }
 export function createWebGLRenderer(canvas) {
   const gl=canvas.getContext("webgl",{alpha:false,antialias:true});
@@ -112,7 +121,10 @@ export function createWebGLRenderer(canvas) {
     color:gl.getAttribLocation(program,"aColor"),
     viewProjection:gl.getUniformLocation(program,"uViewProjection"),
     model:gl.getUniformLocation(program,"uModel"),
-    tint:gl.getUniformLocation(program,"uTint")
+    tint:gl.getUniformLocation(program,"uTint"),
+    normal:gl.getAttribLocation(program,"aNormal"),
+    lightDirection:gl.getUniformLocation(program,"uLightDirection"),
+    ambient:gl.getUniformLocation(program,"uAmbient")
   };
   const cubeBuffer=gl.createBuffer(),gridBuffer=gl.createBuffer();
   const gridVertices=createGridVertices();
@@ -140,13 +152,15 @@ export function createWebGLRenderer(canvas) {
     gl.uniformMatrix4fv(locations.viewProjection,false,viewProjection);
     gl.uniformMatrix4fv(locations.model,false,IDENTITY);
     gl.uniform3fv(locations.tint,[1,1,1]);
+    gl.uniform3fv(locations.lightDirection,[-0.45,-1.0,-0.3]);
+    gl.uniform1f(locations.ambient,0.32);
     bindGeometry(gl,gridBuffer,gridVertices,locations.position,locations.color);
     gl.disable(gl.CULL_FACE);
     gl.drawArrays(gl.LINES,0,gridVertices.length/6);
     gl.enable(gl.CULL_FACE);
+    bindGeometry(gl,cubeBuffer,CUBE_VERTICES,locations.position,locations.color);
     for(const entity of (scene?.entities||[])){
       if(entity.enabled===false)continue;
-      bindGeometry(gl,cubeBuffer,CUBE_VERTICES,locations.position,locations.color);
       gl.uniformMatrix4fv(locations.model,false,modelMatrix(entity));
       const tint=entity.type==="camera"?[.62,.73,1]:entity.type==="light"?[1,.82,.43]:entity.type==="empty"?[.7,.75,.82]:[1,1,1];
       gl.uniform3fv(locations.tint,entity.id===selectedId?[1.2,1.24,.88]:tint);
