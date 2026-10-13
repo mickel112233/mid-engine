@@ -26,7 +26,7 @@ Vec3f sample(const std::vector<Vec3Key>& keys,float t){
 }
 void Skeleton::validate() const {
     for(std::size_t i=0;i<joints.size();++i){const auto& j=joints[i];if(j.parent>=static_cast<std::int32_t>(joints.size())||j.parent==static_cast<std::int32_t>(i)||j.parent< -1)throw std::invalid_argument("Skeleton joint parent index is invalid");
-        if(!std::isfinite(j.bindPosition.x)||!std::isfinite(j.bindPosition.y)||!std::isfinite(j.bindPosition.z)||!std::isfinite(j.bindRotationDegrees.x)||!std::isfinite(j.bindRotationDegrees.y)||!std::isfinite(j.bindRotationDegrees.z))throw std::invalid_argument("Skeleton bind pose must be finite");
+        if(!std::isfinite(j.bindPosition.x)||!std::isfinite(j.bindPosition.y)||!std::isfinite(j.bindPosition.z)||!std::isfinite(j.bindRotationDegrees.x)||!std::isfinite(j.bindRotationDegrees.y)||!std::isfinite(j.bindRotationDegrees.z)||!std::isfinite(j.position.x)||!std::isfinite(j.position.y)||!std::isfinite(j.position.z)||!std::isfinite(j.rotationDegrees.x)||!std::isfinite(j.rotationDegrees.y)||!std::isfinite(j.rotationDegrees.z))throw std::invalid_argument("Skeleton bind/current pose must be finite");
         std::int32_t p=j.parent;std::size_t hops=0;while(p>=0){if(++hops>joints.size())throw std::invalid_argument("Skeleton hierarchy contains a cycle");p=joints[static_cast<std::size_t>(p)].parent;}
     }
 }
