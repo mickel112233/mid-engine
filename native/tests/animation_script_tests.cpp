@@ -13,6 +13,6 @@ int main(){
  mid::Scene scene;auto entity=scene.createEntity("scripted");
  mid::script::Runtime runtime(4);mid::script::Program p{"move",{{mid::script::OpCode::SetPosition,entity,{3,2,1},true}}};
  auto result=runtime.execute(p,scene);check(result.completed&&scene.get(entity).transform.position.x==3,"script updates native scene through safe command VM");
- mid::script::Runtime limited(1);p.instructions.resize(2);check(!limited.execute(p,scene).completed,"instruction budget rejects oversized scripts");
+ mid::script::Runtime limited(1);p.instructions.resize(2);check(!limited.execute(p,scene).completed,"instruction budget rejects oversized scripts");\n const auto before=scene.get(entity).transform.position.x;mid::script::Program invalid{"atomic",{{mid::script::OpCode::SetPosition,entity,{9,9,9},true},{mid::script::OpCode::SetPosition,999999,{0,0,0},true}}};check(!runtime.execute(invalid,scene).completed&&scene.get(entity).transform.position.x==before,"failed scripts roll back all scene mutations");
  if(failures)return 1;std::cout<<"Native animation/script tests passed\n";return 0;
 }
