@@ -328,6 +328,7 @@ export function createWebGLRenderer(canvas) {
     }
     let drawCalls=1+shadowDrawCalls;
     if(instancing&&visible.length){
+      bindGeometry(gl,cubeBuffer,locations.position,locations.color,locations.normal);
       // Group by material factors, then draw each group as GPU instances.
       const groups=new Map();
       for(const item of visible){
