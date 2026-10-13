@@ -281,6 +281,21 @@ export function createWebGLRenderer(canvas) {
     }
     return best;
   }
+  function project(entity) {
+    if(!entity)return null;
+    const rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height||!canvas.width||!canvas.height)return null;
+    const p=entity.transform?.position||[0,0,0];
+    const eye=[distance*Math.cos(pitch)*Math.sin(yaw),distance*Math.sin(pitch),distance*Math.cos(pitch)*Math.cos(yaw)];
+    const vp=multiply(perspective(Math.PI/4,canvas.width/canvas.height,.1,150),lookAt(eye,[0,0,0],[0,1,0]));
+    const [x,y,z]=p;
+    const cx=vp[0]*x+vp[4]*y+vp[8]*z+vp[12],cy=vp[1]*x+vp[5]*y+vp[9]*z+vp[13];
+    const cz=vp[2]*x+vp[6]*y+vp[10]*z+vp[14],cw=vp[3]*x+vp[7]*y+vp[11]*z+vp[15];
+    if(cw<=.1)return null;
+    const nx=cx/cw,ny=cy/cw;
+    if(Math.abs(nx)>1.2||Math.abs(ny)>1.2)return null;
+    return {x:(nx+1)*.5*rect.width,y:(1-ny)*.5*rect.height,depth:cz/cw};
+  }
   function resize() {
     const rect=canvas.getBoundingClientRect(),ratio=Math.min(window.devicePixelRatio||1,2);
     const width=Math.max(1,Math.floor(rect.width*ratio)),height=Math.max(1,Math.floor(rect.height*ratio));
@@ -400,5 +415,5 @@ export function createWebGLRenderer(canvas) {
   window.addEventListener("resize",()=>{ if(lastScene) render(lastScene,lastSelectedId); });
   let destroyed=false;
   function destroy(){if(destroyed)return;destroyed=true;if(timerQuery&&pendingGpuQuery){timerQuery.deleteQueryEXT(pendingGpuQuery);pendingGpuQuery=null;}if(shadowFramebuffer)gl.deleteFramebuffer(shadowFramebuffer);if(shadowTexture)gl.deleteTexture(shadowTexture);if(shadowColorBuffer)gl.deleteRenderbuffer(shadowColorBuffer);if(shadowProgram)gl.deleteProgram(shadowProgram);gl.deleteBuffer(cubeBuffer);gl.deleteBuffer(gridBuffer);gl.deleteBuffer(instanceBuffer);gl.deleteProgram(program);}
-  return { render, destroy };
+  return { render, pick, project, destroy };
 }
