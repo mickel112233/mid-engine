@@ -41,8 +41,8 @@ void jpegFailure(j_common_ptr common){
 }
 ImageRgba8 decodeJpeg(std::span<const std::byte> bytes){
  jpeg_decompress_struct decoder{};JpegError error{};decoder.err=jpeg_std_error(&error.base);error.base.error_exit=jpegFailure;
- unsigned char* raw=nullptr;bool created=false;
- if(setjmp(error.jump)){if(created)jpeg_destroy_decompress(&decoder);std::free(raw);throw std::invalid_argument(std::string("JPEG decode failed: ")+error.message);}
+ unsigned char* volatile raw=nullptr;volatile bool created=false;
+ if(setjmp(error.jump)){if(created)jpeg_destroy_decompress(&decoder);std::free(const_cast<unsigned char*>(raw));throw std::invalid_argument(std::string("JPEG decode failed: ")+error.message);}
  jpeg_create_decompress(&decoder);created=true;
  jpeg_mem_src(&decoder,reinterpret_cast<const unsigned char*>(bytes.data()),static_cast<unsigned long>(bytes.size()));
  if(jpeg_read_header(&decoder,TRUE)!=JPEG_HEADER_OK)ERREXIT(&decoder,JERR_NO_IMAGE);
@@ -52,12 +52,12 @@ ImageRgba8 decodeJpeg(std::span<const std::byte> bytes){
  if(width==0||height==0||channels!=3||static_cast<std::uint64_t>(width)*height>std::numeric_limits<std::size_t>::max()/3U)ERREXIT(&decoder,JERR_WIDTH_OVERFLOW);
  const auto count=static_cast<std::size_t>(width)*height*3U;raw=static_cast<unsigned char*>(std::malloc(count));
  if(!raw)ERREXIT(&decoder,JERR_OUT_OF_MEMORY);
- while(decoder.output_scanline<decoder.output_height){JSAMPROW row=raw+static_cast<std::size_t>(decoder.output_scanline)*width*3U;if(jpeg_read_scanlines(&decoder,&row,1)!=1)ERREXIT(&decoder,JERR_CANT_SUSPEND);}
+ while(decoder.output_scanline<decoder.output_height){JSAMPROW row=const_cast<unsigned char*>(raw)+static_cast<std::size_t>(decoder.output_scanline)*width*3U;if(jpeg_read_scanlines(&decoder,&row,1)!=1)ERREXIT(&decoder,JERR_CANT_SUSPEND);}
  if(!jpeg_finish_decompress(&decoder))ERREXIT(&decoder,JERR_CANT_SUSPEND);
  jpeg_destroy_decompress(&decoder);created=false;
  ImageRgba8 out;out.width=width;out.height=height;out.pixels.resize(static_cast<std::size_t>(width)*height*4U);
  for(std::size_t i=0,j=0;i<count;i+=3,j+=4){out.pixels[j]=raw[i];out.pixels[j+1]=raw[i+1];out.pixels[j+2]=raw[i+2];out.pixels[j+3]=255;}
- std::free(raw);return out;
+ std::free(const_cast<unsigned char*>(raw));return out;
 }
 #endif
 }
