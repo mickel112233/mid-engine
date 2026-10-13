@@ -24,11 +24,13 @@ struct SkinInfluence { std::array<std::uint32_t,4> joints{}; std::array<float,4>
 struct Vec3Key { float time{0}; Vec3f value{}; };
 struct JointTrack { std::size_t joint{0}; std::vector<Vec3Key> positions; std::vector<Vec3Key> rotations; std::vector<Vec3Key> scales; };
 struct Clip { std::string name; float duration{0}; std::vector<JointTrack> tracks; void validate(const Skeleton& skeleton) const; };
-struct AnimatorDebugSnapshot { bool playing{false}; bool looping{true}; std::string clipName; float time{0}; float duration{0}; Pose worldPose; std::vector<Vec3f> localPositions; std::vector<Vec3f> localRotations; std::vector<Vec3f> localScales; };
+struct AnimatorDebugSnapshot { bool playing{false}; bool looping{true}; bool blending{false}; float blendProgress{1.0F}; std::string clipName; float time{0}; float duration{0}; Pose worldPose; std::vector<Vec3f> localPositions; std::vector<Vec3f> localRotations; std::vector<Vec3f> localScales; };
 class Animator final {
 public:
     explicit Animator(Skeleton skeleton);
     void play(const Clip& clip,bool looping=true);
+    // Starts a timed cross-fade from the current local pose to a new clip.
+    void crossFade(const Clip& clip,float blendDuration,bool looping=true);
     void stop() noexcept;
     void update(float deltaSeconds);
     [[nodiscard]] const Skeleton& skeleton() const noexcept;
@@ -40,6 +42,10 @@ private:
     std::optional<Clip> clip_;
     float time_{0};
     bool looping_{true};
+    Skeleton blendSource_;
+    float blendDuration_{0.0F};
+    float blendElapsed_{0.0F};
+    bool blending_{false};
 };
 struct IkResult { bool converged{false}; std::size_t iterations{0}; float finalError{0}; };
 struct IkJointConstraint { std::size_t joint{0}; Vec3f minimumRotationDegrees{-180,-180,-180}; Vec3f maximumRotationDegrees{180,180,180}; float maximumStepDegrees{45}; };
