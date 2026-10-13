@@ -35,6 +35,12 @@ bool PhysicsWorld::removeBody(std::uint64_t id) {
 }
 RigidBody* PhysicsWorld::body(std::uint64_t id) noexcept {for(auto& b:bodies_)if(b.entityId==id)return &b;return nullptr;}
 const RigidBody* PhysicsWorld::body(std::uint64_t id) const noexcept {for(const auto& b:bodies_)if(b.entityId==id)return &b;return nullptr;}
+void PhysicsWorld::addPlane(PlaneCollider plane) {
+    if(!finite(plane.normal)||!std::isfinite(plane.offset)||!std::isfinite(plane.restitution)||plane.restitution<0||plane.restitution>1) throw std::invalid_argument("Plane collider values are invalid");
+    const float n=length(plane.normal); if(n<1e-7F) throw std::invalid_argument("Plane normal cannot be zero");
+    plane.normal=mul(plane.normal,1.0F/n); plane.offset/=n; planes_.push_back(plane);
+}
+void PhysicsWorld::clearPlanes() noexcept { planes_.clear(); }
 void PhysicsWorld::applyForce(std::uint64_t id,Vec3f force) {
     auto* b=body(id);if(!b)throw std::out_of_range("Rigid body does not exist");
     if(!finite(force))throw std::invalid_argument("Force must be finite");
@@ -93,6 +99,14 @@ void PhysicsWorld::step() {
         const Vec3f relative=sub(b.velocity,a.velocity);const float along=dot(relative,normal);
         if(along<0.0F){const float restitution=std::min(a.restitution,b.restitution);const float impulse=-(1.0F+restitution)*along/total;
             const Vec3f impulseVector=mul(normal,impulse);a.velocity=sub(a.velocity,mul(impulseVector,invA));b.velocity=add(b.velocity,mul(impulseVector,invB));}
+    }
+    for(auto& body:bodies_) if(!body.kinematic&&body.inverseMass>0.0F) for(const auto& plane:planes_) {
+        const float distance=dot(plane.normal,body.position)-plane.offset;
+        if(distance>=body.radius) continue;
+        const float penetration=body.radius-distance; body.position=add(body.position,mul(plane.normal,penetration));
+        const float normalVelocity=dot(body.velocity,plane.normal);
+        if(normalVelocity<0.0F) body.velocity=sub(body.velocity,mul(plane.normal,(1.0F+plane.restitution)*normalVelocity));
+        contacts_.push_back({body.entityId,0,plane.normal,penetration});
     }
     stats_.contacts=contacts_.size();
 }
